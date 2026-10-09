@@ -1,0 +1,12 @@
+{
+  "name": "caja-de-pandora-pos",
+  "version": "1.0.0",
+  "description": "Sistema POS y Catálogo para La Caja de Pandora",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

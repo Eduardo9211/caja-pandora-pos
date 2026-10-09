@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>La Caja de Pandora - POS</title>
+    <link rel="stylesheet" href="style.css">
+    <meta name="theme-color" content="#1e293b">
+</head>
+<body>
+
+    <header>
+        <h1>La Caja de Pandora - POS</h1>
+    </header>
+
+    <div class="content">
+
+        <!-- TAB 1: VENTAS / COBRO -->
+        <div id="tab-ventas" class="tab-content active">
+            <div class="card">
+                <h2>Cobrar Producto</h2>
+                
+                <label for="venta-buscar">Buscar por Nombre o Escanear Código</label>
+                <input type="text" id="venta-buscar" placeholder="Escribe o escanea código..." oninput="filtrarOSeleccionarProducto()">
+
+                <label for="venta-producto">Seleccionar Producto</label>
+                <select id="venta-producto" onchange="seleccionarProductoVenta()">
+                    <option value="">-- Seleccionar del inventario --</option>
+                </select>
+
+                <label for="venta-cantidad">Cantidad</label>
+                <input type="number" id="venta-cantidad" value="1" min="1" oninput="calcularTotalVenta()">
+
+                <label for="venta-descuento">Descuento aplicado ($) <span style="font-size:0.75rem; color:#f87171;">(Descuenta solo a la ganancia de la tienda)</span></label>
+                <input type="number" id="venta-descuento" value="0.00" min="0" step="0.50" oninput="calcularTotalVenta()">
+
+                <div class="total-box">
+                    Total a Pagar: $<span id="venta-total">0.00</span>
+                </div>
+
+                <label for="venta-paga">Monto con el que paga el cliente</label>
+                <input type="number" id="venta-paga" placeholder="0.00" oninput="calcularCambio()">
+
+                <div class="change-box">
+                    Cambio: $<span id="venta-cambio">0.00</span>
+                </div>
+
+                <label for="venta-telefono">Teléfono WhatsApp del cliente (opcional)</label>
+                <input type="tel" id="venta-telefono" placeholder="Ej: 521XXXXXXXXXX">
+
+                <button class="btn-accent" onclick="procesarVenta()">Registrar Venta</button>
+                
+                <!-- BOTÓN PARA IMPRIMIR TICKET TÉRMICO Y50P -->
+                <button class="btn-primary" onclick="imprimirUltimaVenta()" style="margin-top: 10px;">🖨️ Imprimir Ticket (Y50P)</button>
+            </div>
+        </div>
+
+        <!-- TAB 2: PROVEEDORES / CONSIGNACIÓN -->
+        <div id="tab-proveedores" class="tab-content">
+            <div class="card">
+                <h2>Registrar Proveedor / Consignador</h2>
+                <input type="text" id="prov-nombre" placeholder="Nombre completo">
+                <input type="tel" id="prov-telefono" placeholder="Teléfono de contacto">
+                <button class="btn-primary" onclick="guardarProveedor()">Guardar Proveedor</button>
+            </div>
+
+            <div class="card">
+                <h2>Ingresar Producto al Inventario</h2>
+                <label for="prod-proveedor">Proveedor / Consignador</label>
+                <select id="prod-proveedor">
+                    <option value="">-- Seleccionar --</option>
+                </select>
+
+                <label for="prod-nombre">Nombre del Producto</label>
+                <input type="text" id="prod-nombre" placeholder="Ej: Figura Vintage Batman 1989">
+
+                <label for="prod-precio">Precio de Venta ($)</label>
+                <input type="number" id="prod-precio" placeholder="0.00">
+
+                <label for="prod-comision">Comisión de la Tienda (%)</label>
+                <input type="number" id="prod-comision" placeholder="Ej: 20" value="20">
+
+                <label for="prod-stock">Cantidad / Piezas a ingresar</label>
+                <input type="number" id="prod-stock" value="1" min="1">
+
+                <button class="btn-accent" onclick="guardarProducto()">Cargar al Inventario y Generar Código</button>
+            </div>
+        </div>
+
+        <!-- TAB 3: INVENTARIO Y CATÁLOGO WHATSAPP -->
+        <div id="tab-inventario" class="tab-content">
+            <div class="card">
+                <h2>Catálogo Especial para WhatsApp</h2>
+                <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">Comparte los artículos destacados directamente por WhatsApp con texto ligero (sin gastar memoria ni datos de imágenes).</p>
+                <button class="btn-accent" onclick="compartirCatalogoWhatsApp()">📱 Compartir Catálogo Especial por WhatsApp</button>
+            </div>
+
+            <div class="card">
+                <h2>Productos Activos en Inventario</h2>
+                <div id="lista-inventario">
+                    <!-- Carga dinámica -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: LISTA DE DESEOS -->
+        <div id="tab-deseos" class="tab-content">
+            <div class="card">
+                <h2>Registrar Cliente en Lista de Deseos</h2>
+                <input type="text" id="deseo-cliente" placeholder="Nombre del cliente">
+                <input type="tel" id="deseo-telefono" placeholder="WhatsApp del cliente">
+                <input type="text" id="deseo-producto" placeholder="Producto que busca">
+                <button class="btn-primary" onclick="guardarDeseo()">Guardar en Lista de Deseos</button>
+            </div>
+
+            <div class="card">
+                <h2>Solicitudes Pendientes</h2>
+                <div id="lista-deseos">
+                    <!-- Carga dinámica -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 5: REPORTES Y CORTE DE CAJA -->
+        <div id="tab-reportes" class="tab-content">
+            <div class="card">
+                <h2>Corte de Caja</h2>
+                <div class="total-box" style="text-align: left; margin-bottom: 8px;">
+                    Ventas Totales: $<span id="rep-ventas">0.00</span>
+                </div>
+                <div class="total-box" style="text-align: left; margin-bottom: 8px; color: #4ade80;">
+                    Ganancias Netas (Comisiones - Descuentos): $<span id="rep-ganancias">0.00</span>
+                </div>
+                <div class="total-box" style="text-align: left; margin-bottom: 12px; color: #f87171;">
+                    A pagar a Proveedores: $<span id="rep-proveedores">0.00</span>
+                </div>
+                <button class="btn-primary" onclick="cargarReportes()" style="margin-bottom: 10px;">Actualizar Reporte</button>
+                
+                <!-- BOTÓN PARA DESCARGAR REPORTE EN PDF -->
+                <button class="btn-accent" onclick="generarReporteCortePDF()">📄 Descargar Reporte PDF</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- NAVEGACIÓN INFERIOR -->
+    <nav>
+        <button class="nav-btn active" onclick="cambiarTab('ventas', this)">
+            <span>🛒</span>
+            <span>Ventas</span>
+        </button>
+        <button class="nav-btn" onclick="cambiarTab('proveedores', this)">
+            <span>🤝</span>
+            <span>Consigna</span>
+        </button>
+        <button class="nav-btn" onclick="cambiarTab('inventario', this)">
+            <span>📦</span>
+            <span>Inventario</span>
+        </button>
+        <button class="nav-btn" onclick="cambiarTab('deseos', this)">
+            <span>⭐</span>
+            <span>Deseos</span>
+        </button>
+        <button class="nav-btn" onclick="cambiarTab('reportes', this)">
+            <span>📊</span>
+            <span>Corte</span>
+        </button>
+    </nav>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
