@@ -1,11 +1,11 @@
 import { thermalPrinter } from './printerService.js';
 import { generarReportePDF } from './pdfReportService.js';
 
-// Base de datos local en memoria (simulada con localStorage para persistencia en el celular)
 let proveedores = JSON.parse(localStorage.getItem('pandora_proveedores')) || [];
 let inventario = JSON.parse(localStorage.getItem('pandora_inventario')) || [];
 let deseos = JSON.parse(localStorage.getItem('pandora_deseos')) || [];
 let ventasRealizadas = JSON.parse(localStorage.getItem('pandora_ventas')) || [];
+let ultimaEtiquetaData = null; // Para almacenar el último producto creado y mandar a imprimir su etiqueta
 
 // ==========================================
 // CONTROL DE TABS
@@ -25,7 +25,7 @@ window.cambiarTab = function(tabName, element) {
 };
 
 // ==========================================
-// 1. PROVEEDORES Y CONSIGNACIÓN
+// 1. PROVEEDORES Y CONSIGNACIÓN + ETIQUETAS Y50P
 // ==========================================
 window.guardarProveedor = function() {
     const nombre = document.getElementById('prov-nombre').value.trim();
@@ -72,12 +72,36 @@ window.guardarProducto = function() {
 
     inventario.push(producto);
     localStorage.setItem('pandora_inventario', JSON.stringify(inventario));
+    
+    // Guardamos referencia para imprimir etiqueta de este artículo recién creado
+    ultimaEtiquetaData = producto;
 
     document.getElementById('prod-nombre').value = '';
     document.getElementById('prod-precio').value = '';
     document.getElementById('prod-stock').value = '1';
-    alert(`¡Producto cargado! Código generado para etiqueta: ${codigoBarra}`);
+    actualizarSelects();
     renderInventario();
+    alert(`¡Producto cargado! Código para etiqueta: ${codigoBarra}. Ya puedes imprimir su etiqueta en la Y50P.`);
+};
+
+window.imprimirUltimaEtiqueta = async function() {
+    if (!ultimaEtiquetaData) {
+        alert('Primero ingresa y guarda un producto para generar su etiqueta.');
+        return;
+    }
+
+    try {
+        await thermalPrinter.connect();
+        await thermalPrinter.printTicket({
+            folio: ultimaEtiquetaData.codigo,
+            fecha: new Date().toLocaleDateString(),
+            productos: [{ nombre: ultimaEtiquetaData.nombre, cantidad: 1, precio: ultimaEtiquetaData.precio }],
+            total: ultimaEtiquetaData.precio
+        });
+        alert('¡Etiqueta impresa en la Y50P con éxito!');
+    } catch (error) {
+        alert('Error al imprimir etiqueta: ' + error.message);
+    }
 };
 
 function actualizarSelects() {
@@ -160,14 +184,12 @@ window.procesarVenta = function() {
         return;
     }
 
-    // Descontar stock
     producto.stock -= cantidad;
 
-    // Calcular montos aplicando la regla: el descuento afecta SOLO la ganancia de la tienda
     const subtotalBruto = producto.precio * cantidad;
     const comisionTiendaBruta = subtotalBruto * (producto.comisionPorc / 100);
-    const comisionTiendaNeta = comisionTiendaBruta - descuento; // El descuento rebaja la ganancia de la tienda
-    const pagoProveedor = subtotalBruto - comisionTiendaBruta; // El proveedor recibe integro su porcentaje base
+    const comisionTiendaNeta = comisionTiendaBruta - descuento; 
+    const pagoProveedor = subtotalBruto - comisionTiendaBruta; 
 
     const ventaRecord = {
         folio: Math.floor(1000 + Math.random() * 9000),
@@ -191,26 +213,6 @@ window.procesarVenta = function() {
     actualizarSelects();
 };
 
-window.imprimirUltimaVenta = async function() {
-  try {
-    await thermalPrinter.connect();
-    const selectProd = document.getElementById('venta-producto');
-    const nombreProd = selectProd.options[selectProd.selectedIndex]?.text || 'Producto Venta';
-    const cantidad = parseInt(document.getElementById('venta-cantidad').value) || 1;
-    const totalVenta = parseFloat(document.getElementById('venta-total').innerText) || 0;
-
-    await thermalPrinter.printTicket({
-      folio: Math.floor(1000 + Math.random() * 9000),
-      fecha: new Date().toLocaleString(),
-      productos: [{ nombre: nombreProd, cantidad, precio: totalVenta / cantidad }],
-      total: totalVenta
-    });
-    alert('¡Ticket impreso en la Y50P!');
-  } catch (error) {
-    alert('Error al imprimir: ' + error.message);
-  }
-};
-
 // ==========================================
 // 3. INVENTARIO Y CATÁLOGO WHATSAPP LIGERO
 // ==========================================
@@ -225,7 +227,7 @@ function renderInventario() {
 
     inventario.forEach(prod => {
         const prov = proveedores.find(p => p.id == prod.proveedorId);
-        const provNombre = prov ? prov.name || prov.nombre : 'General';
+        const provNombre = prov ? prov.nombre : 'General';
         contenedor.innerHTML += `
             <div style="background:#0f172a; padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid #334155;">
                 <strong>[${prod.codigo}] ${prod.nombre}</strong><br>
@@ -326,5 +328,4 @@ window.generarReporteCortePDF = function() {
     });
 };
 
-// Inicializar selects al cargar
 actualizarSelects();

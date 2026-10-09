@@ -49,13 +49,10 @@
                 <input type="tel" id="venta-telefono" placeholder="Ej: 521XXXXXXXXXX">
 
                 <button class="btn-accent" onclick="procesarVenta()">Registrar Venta</button>
-                
-                <!-- BOTÓN PARA IMPRIMIR TICKET TÉRMICO Y50P -->
-                <button class="btn-primary" onclick="imprimirUltimaVenta()" style="margin-top: 10px;">🖨️ Imprimir Ticket (Y50P)</button>
             </div>
         </div>
 
-        <!-- TAB 2: PROVEEDORES / CONSIGNACIÓN -->
+        <!-- TAB 2: PROVEEDORES / CONSIGNACIÓN Y ETIQUETAS -->
         <div id="tab-proveedores" class="tab-content">
             <div class="card">
                 <h2>Registrar Proveedor / Consignador</h2>
@@ -84,6 +81,9 @@
                 <input type="number" id="prod-stock" value="1" min="1">
 
                 <button class="btn-accent" onclick="guardarProducto()">Cargar al Inventario y Generar Código</button>
+                
+                <!-- BOTÓN PARA IMPRIMIR ETIQUETA EN Y50P DESDE CONSIGNA -->
+                <button class="btn-primary" onclick="imprimirUltimaEtiqueta()" style="margin-top: 10px;">🖨️ Imprimir Etiqueta (Y50P)</button>
             </div>
         </div>
 
