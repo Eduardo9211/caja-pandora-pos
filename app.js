@@ -24,7 +24,7 @@ window.cambiarTab = function(tabName, element) {
 };
 
 // ==========================================
-// 1. PROVEEDORES Y CONSIGNACIÓN
+// 1. PROVEEDORES Y CONSIGNACIÓN (SIN CÓDIGO INICIAL)
 // ==========================================
 window.guardarProveedor = function() {
     const nombre = document.getElementById('prov-nombre').value.trim();
@@ -57,11 +57,9 @@ window.guardarProducto = function() {
         return;
     }
 
-    const codigoBarra = 'PAN-' + Math.floor(100000 + Math.random() * 900000);
-
     const producto = {
         id: Date.now(),
-        codigo: codigoBarra,
+        codigo: null, // Se genera después al autorizar e imprimir
         proveedorId,
         nombre,
         precio,
@@ -77,16 +75,16 @@ window.guardarProducto = function() {
     document.getElementById('prod-stock').value = '1';
     actualizarSelects();
     renderInventario();
-    alert(`¡Producto cargado! Código generado: ${codigoBarra}`);
+    alert('¡Producto cargado al inventario con éxito!');
 };
 
 // ==========================================
-// IMPRESIÓN MÚLTIPLE DE ETIQUETAS EN Y50P
+// GENERACIÓN DE CÓDIGO E IMPRESIÓN MÚLTIPLE EN Y50P
 // ==========================================
 window.imprimirEtiquetasSeleccionadas = async function() {
     const checkboxes = document.querySelectorAll('.check-etiqueta:checked');
     if (checkboxes.length === 0) {
-        alert('Selecciona al menos un producto para imprimir su etiqueta.');
+        alert('Selecciona al menos un producto para generar su código e imprimir su etiqueta.');
         return;
     }
 
@@ -98,18 +96,28 @@ window.imprimirEtiquetasSeleccionadas = async function() {
             const producto = inventario.find(p => p.id === prodId);
             
             if (producto) {
+                // Si aún no tiene código asignado, se lo generamos en este momento (post-autorización)
+                if (!producto.codigo) {
+                    producto.codigo = 'PAN-' + Math.floor(100000 + Math.random() * 900000);
+                }
+
                 await thermalPrinter.printTicket({
                     folio: producto.codigo,
                     fecha: new Date().toLocaleDateString(),
                     productos: [{ nombre: producto.nombre, cantidad: 1, precio: producto.precio }],
                     total: producto.precio
                 });
-                // Pequeña pausa entre etiquetas para no saturar la impresora Bluetooth
+                
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
         }
 
-        alert('¡Todas las etiquetas seleccionadas se imprimieron con éxito!');
+        // Guardamos los códigos generados en localStorage
+        localStorage.setItem('pandora_inventario', JSON.stringify(inventario));
+        renderInventario();
+        actualizarSelects();
+
+        alert('¡Códigos generados y etiquetas impresas con éxito!');
     } catch (error) {
         alert('Error al imprimir etiquetas: ' + error.message);
     }
@@ -126,7 +134,8 @@ function actualizarSelects() {
     selectVenta.innerHTML = '<option value="">-- Seleccionar del inventario --</option>';
     inventario.forEach(prod => {
         if (prod.stock > 0) {
-            selectVenta.innerHTML += `<option value="${prod.id}" data-precio="${prod.precio}" data-codigo="${prod.codigo}">[${prod.codigo}] ${prod.nombre} - $${prod.precio.toFixed(2)} (Stock: ${prod.stock})</option>`;
+            const codigoMostrado = prod.codigo ? `[${prod.codigo}]` : '[Sin Código]';
+            selectVenta.innerHTML += `<option value="${prod.id}" data-precio="${prod.precio}" data-codigo="${prod.codigo || ''}">${codigoMostrado} ${prod.nombre} - $${prod.precio.toFixed(2)} (Stock: ${prod.stock})</option>`;
         }
     });
 }
@@ -239,10 +248,12 @@ function renderInventario() {
     inventario.forEach(prod => {
         const prov = proveedores.find(p => p.id == prod.proveedorId);
         const provNombre = prov ? prov.nombre : 'General';
+        const codigoTexto = prod.codigo ? `<strong style="color: #38bdf8;">[${prod.codigo}]</strong>` : `<span style="color: #f87171;">[Sin Código Asignado]</span>`;
+        
         contenedor.innerHTML += `
             <div style="background:#0f172a; padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid #334155; display: flex; align-items: center; justify-content: space-between;">
                 <div>
-                    <strong style="color: #38bdf8;">[${prod.codigo}]</strong> ${prod.nombre}<br>
+                    ${codigoTexto} ${prod.nombre}<br>
                     Precio: $${prod.precio.toFixed(2)} | Stock: ${prod.stock}<br>
                     <span style="font-size:0.8rem; color:#94a3b8;">Consignador: ${provNombre}</span>
                 </div>
@@ -262,7 +273,8 @@ window.compartirCatalogoWhatsApp = function() {
 
     let mensaje = "🌟 *LA CAJA DE PANDORA - CATÁLOGO ESPECIAL* 🌟\n\n¡Hola! Checa nuestros artículos destacados disponibles:\n\n";
     inventario.filter(p => p.stock > 0).forEach(p => {
-        mensaje += `▪️ *${p.nombre}*\n   Precio: $${p.precio.toFixed(2)}\n   Código: ${p.codigo}\n\n`;
+        const cod = p.codigo ? p.codigo : 'Pendiente';
+        mensaje += `▪️ *${p.nombre}*\n   Precio: $${p.precio.toFixed(2)}\n   Ref: ${cod}\n\n`;
     });
     mensaje += "¿Te interesa alguno? Escríbenos para apartarlo. 🛍️";
 
@@ -309,7 +321,7 @@ function renderDeseos() {
             </div>
         `;
     });
-}
+};
 
 // ==========================================
 // 5. CORTE DE CAJA Y REPORTES PDF

@@ -53,7 +53,7 @@
             </div>
         </div>
 
-        <!-- TAB 2: PROVEEDORES / CONSIGNACIÓN Y ETIQUETAS -->
+        <!-- TAB 2: PROVEEDORES / CONSIGNACIÓN -->
         <div id="tab-proveedores" class="tab-content">
             <div class="card">
                 <h2>Registrar Proveedor / Consignador</h2>
@@ -63,7 +63,7 @@
             </div>
 
             <div class="card">
-                <h2>Ingresar Producto al Inventario</h2>
+                <h2>Ingresar Producto a Consigna</h2>
                 <label for="prod-proveedor">Proveedor / Consignador</label>
                 <select id="prod-proveedor">
                     <option value="">-- Seleccionar --</option>
@@ -81,7 +81,7 @@
                 <label for="prod-stock">Cantidad / Piezas a ingresar</label>
                 <input type="number" id="prod-stock" value="1" min="1">
 
-                <button class="btn-accent" onclick="guardarProducto()">Cargar al Inventario y Generar Código</button>
+                <button class="btn-accent" onclick="guardarProducto()">Cargar al Inventario</button>
             </div>
         </div>
 
@@ -89,14 +89,14 @@
         <div id="tab-inventario" class="tab-content">
             <div class="card">
                 <h2>Catálogo Especial para WhatsApp</h2>
-                <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">Comparte los artículos destacados directamente por WhatsApp con texto ligero (sin gastar memoria ni datos de imágenes).</p>
+                <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">Comparte los artículos destacados directamente por WhatsApp con texto ligero.</p>
                 <button class="btn-accent" onclick="compartirCatalogoWhatsApp()">📱 Compartir Catálogo Especial por WhatsApp</button>
             </div>
 
             <div class="card">
-                <h2>Productos Activos y Selección de Etiquetas</h2>
-                <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">Selecciona los productos que requieras y presiona el botón para imprimir sus etiquetas en la Y50P.</p>
-                <button class="btn-primary" onclick="imprimirEtiquetasSeleccionadas()" style="margin-bottom: 15px;">🖨️ Imprimir Etiquetas Seleccionadas (Y50P)</button>
+                <h2>Inventario y Generación de Códigos / Etiquetas</h2>
+                <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">Selecciona los productos ya autorizados para generar su código y mandarlos a imprimir en la Y50P.</p>
+                <button class="btn-primary" onclick="imprimirEtiquetasSeleccionadas()" style="margin-bottom: 15px;">🖨️ Generar Código e Imprimir Seleccionados (Y50P)</button>
                 
                 <div id="lista-inventario">
                     <!-- Carga dinámica con checkboxes -->
