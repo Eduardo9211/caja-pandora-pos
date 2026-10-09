@@ -5,7 +5,6 @@ let proveedores = JSON.parse(localStorage.getItem('pandora_proveedores')) || [];
 let inventario = JSON.parse(localStorage.getItem('pandora_inventario')) || [];
 let deseos = JSON.parse(localStorage.getItem('pandora_deseos')) || [];
 let ventasRealizadas = JSON.parse(localStorage.getItem('pandora_ventas')) || [];
-let ultimaEtiquetaData = null; // Para almacenar el último producto creado y mandar a imprimir su etiqueta
 
 // ==========================================
 // CONTROL DE TABS
@@ -25,7 +24,7 @@ window.cambiarTab = function(tabName, element) {
 };
 
 // ==========================================
-// 1. PROVEEDORES Y CONSIGNACIÓN + ETIQUETAS Y50P
+// 1. PROVEEDORES Y CONSIGNACIÓN
 // ==========================================
 window.guardarProveedor = function() {
     const nombre = document.getElementById('prov-nombre').value.trim();
@@ -72,35 +71,47 @@ window.guardarProducto = function() {
 
     inventario.push(producto);
     localStorage.setItem('pandora_inventario', JSON.stringify(inventario));
-    
-    // Guardamos referencia para imprimir etiqueta de este artículo recién creado
-    ultimaEtiquetaData = producto;
 
     document.getElementById('prod-nombre').value = '';
     document.getElementById('prod-precio').value = '';
     document.getElementById('prod-stock').value = '1';
     actualizarSelects();
     renderInventario();
-    alert(`¡Producto cargado! Código para etiqueta: ${codigoBarra}. Ya puedes imprimir su etiqueta en la Y50P.`);
+    alert(`¡Producto cargado! Código generado: ${codigoBarra}`);
 };
 
-window.imprimirUltimaEtiqueta = async function() {
-    if (!ultimaEtiquetaData) {
-        alert('Primero ingresa y guarda un producto para generar su etiqueta.');
+// ==========================================
+// IMPRESIÓN MÚLTIPLE DE ETIQUETAS EN Y50P
+// ==========================================
+window.imprimirEtiquetasSeleccionadas = async function() {
+    const checkboxes = document.querySelectorAll('.check-etiqueta:checked');
+    if (checkboxes.length === 0) {
+        alert('Selecciona al menos un producto para imprimir su etiqueta.');
         return;
     }
 
     try {
         await thermalPrinter.connect();
-        await thermalPrinter.printTicket({
-            folio: ultimaEtiquetaData.codigo,
-            fecha: new Date().toLocaleDateString(),
-            productos: [{ nombre: ultimaEtiquetaData.nombre, cantidad: 1, precio: ultimaEtiquetaData.precio }],
-            total: ultimaEtiquetaData.precio
-        });
-        alert('¡Etiqueta impresa en la Y50P con éxito!');
+
+        for (let cb of checkboxes) {
+            const prodId = parseInt(cb.value);
+            const producto = inventario.find(p => p.id === prodId);
+            
+            if (producto) {
+                await thermalPrinter.printTicket({
+                    folio: producto.codigo,
+                    fecha: new Date().toLocaleDateString(),
+                    productos: [{ nombre: producto.nombre, cantidad: 1, precio: producto.precio }],
+                    total: producto.precio
+                });
+                // Pequeña pausa entre etiquetas para no saturar la impresora Bluetooth
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
+
+        alert('¡Todas las etiquetas seleccionadas se imprimieron con éxito!');
     } catch (error) {
-        alert('Error al imprimir etiqueta: ' + error.message);
+        alert('Error al imprimir etiquetas: ' + error.message);
     }
 };
 
@@ -229,10 +240,15 @@ function renderInventario() {
         const prov = proveedores.find(p => p.id == prod.proveedorId);
         const provNombre = prov ? prov.nombre : 'General';
         contenedor.innerHTML += `
-            <div style="background:#0f172a; padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid #334155;">
-                <strong>[${prod.codigo}] ${prod.nombre}</strong><br>
-                Precio: $${prod.precio.toFixed(2)} | Stock: ${prod.stock}<br>
-                <span style="font-size:0.8rem; color:#94a3b8;">Consignador: ${provNombre}</span>
+            <div style="background:#0f172a; padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid #334155; display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <strong style="color: #38bdf8;">[${prod.codigo}]</strong> ${prod.nombre}<br>
+                    Precio: $${prod.precio.toFixed(2)} | Stock: ${prod.stock}<br>
+                    <span style="font-size:0.8rem; color:#94a3b8;">Consignador: ${provNombre}</span>
+                </div>
+                <div>
+                    <input type="checkbox" class="check-etiqueta" value="${prod.id}" style="width: 22px; height: 22px; cursor: pointer;">
+                </div>
             </div>
         `;
     });
