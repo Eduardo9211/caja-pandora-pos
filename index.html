@@ -53,7 +53,7 @@
             </div>
         </div>
 
-        <!-- TAB 2: PROVEEDORES / CONSIGNACIÓN -->
+        <!-- TAB 2: CONSIGNA / REGISTRO -->
         <div id="tab-proveedores" class="tab-content">
             <div class="card">
                 <h2>Registrar Proveedor / Consignador</h2>
@@ -85,7 +85,18 @@
             </div>
         </div>
 
-        <!-- TAB 3: INVENTARIO Y CATÁLOGO WHATSAPP -->
+        <!-- TAB 3: PROVEEDORES Y SALDOS (NUEVA PESTAÑA) -->
+        <div id="tab-saldos-prov" class="tab-content">
+            <div class="card">
+                <h2>Control y Liquidación de Proveedores</h2>
+                <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">Consulta los saldos pendientes por proveedor y realiza la liquidación para reiniciar cuentas a $0.00.</p>
+                <div id="lista-saldos-proveedores">
+                    <!-- Carga dinámica -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: INVENTARIO Y CATÁLOGO WHATSAPP -->
         <div id="tab-inventario" class="tab-content">
             <div class="card">
                 <h2>Catálogo Especial para WhatsApp</h2>
@@ -104,7 +115,7 @@
             </div>
         </div>
 
-        <!-- TAB 4: LISTA DE DESEOS -->
+        <!-- TAB 5: LISTA DE DESEOS -->
         <div id="tab-deseos" class="tab-content">
             <div class="card">
                 <h2>Registrar Cliente en Lista de Deseos</h2>
@@ -122,7 +133,7 @@
             </div>
         </div>
 
-        <!-- TAB 5: REPORTES Y CORTE DE CAJA -->
+        <!-- TAB 6: REPORTES Y CORTE DE CAJA -->
         <div id="tab-reportes" class="tab-content">
             <div class="card">
                 <h2>Corte de Caja</h2>
@@ -144,8 +155,8 @@
 
     </div>
 
-    <!-- NAVEGACIÓN INFERIOR -->
-    <nav>
+    <!-- NAVEGACIÓN INFERIOR (6 BOTONES) -->
+    <nav style="display: flex; justify-content: space-around; overflow-x: auto;">
         <button class="nav-btn active" onclick="cambiarTab('ventas', this)">
             <span>🛒</span>
             <span>Ventas</span>
@@ -154,9 +165,13 @@
             <span>🤝</span>
             <span>Consigna</span>
         </button>
+        <button class="nav-btn" onclick="cambiarTab('saldos-prov', this)">
+            <span>👥</span>
+            <span>Prov.</span>
+        </button>
         <button class="nav-btn" onclick="cambiarTab('inventario', this)">
             <span>📦</span>
-            <span>Inventario</span>
+            <span>Stock</span>
         </button>
         <button class="nav-btn" onclick="cambiarTab('deseos', this)">
             <span>⭐</span>

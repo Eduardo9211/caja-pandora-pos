@@ -18,13 +18,14 @@ window.cambiarTab = function(tabName, element) {
     if (element) element.classList.add('active');
 
     if (tabName === 'inventario') renderInventario();
+    if (tabName === 'saldos-prov') renderProveedoresSaldos();
     if (tabName === 'deseos') renderDeseos();
     if (tabName === 'reportes') cargarReportes();
     if (tabName === 'ventas' || tabName === 'proveedores') actualizarSelects();
 };
 
 // ==========================================
-// 1. PROVEEDORES Y CONSIGNACIÓN (SIN CÓDIGO INICIAL)
+// 1. PROVEEDORES Y CONSIGNACIÓN
 // ==========================================
 window.guardarProveedor = function() {
     const nombre = document.getElementById('prov-nombre').value.trim();
@@ -35,7 +36,7 @@ window.guardarProveedor = function() {
         return;
     }
 
-    const proveedor = { id: Date.now(), nombre, telefono };
+    const proveedor = { id: Date.now(), nombre, telefono, saldoLiquidado: 0 };
     proveedores.push(proveedor);
     localStorage.setItem('pandora_proveedores', JSON.stringify(proveedores));
 
@@ -59,7 +60,7 @@ window.guardarProducto = function() {
 
     const producto = {
         id: Date.now(),
-        codigo: null, // Se genera después al autorizar e imprimir
+        codigo: null,
         proveedorId,
         nombre,
         precio,
@@ -79,7 +80,63 @@ window.guardarProducto = function() {
 };
 
 // ==========================================
-// GENERACIÓN DE CÓDIGO E IMPRESIÓN MÚLTIPLE EN Y50P
+// 2. GESTIÓN Y LIQUIDACIÓN DE PROVEEDORES
+// ==========================================
+function renderProveedoresSaldos() {
+    const contenedor = document.getElementById('lista-saldos-proveedores');
+    contenedor.innerHTML = '';
+
+    if (proveedores.length === 0) {
+        contenedor.innerHTML = '<p style="color:#94a3b8; font-size:0.9rem;">No hay proveedores registrados.</p>';
+        return;
+    }
+
+    proveedores.forEach(prov => {
+        // Calcular productos del proveedor y monto pendiente basado en ventas
+        const prodProveedor = inventario.filter(p => p.proveedorId == prov.id);
+        const totalStockProv = prodProveedor.reduce((acc, p) => acc + p.stock, 0);
+
+        // Sumar lo que se le debe a este proveedor de las ventas realizadas
+        let deudaPendiente = 0;
+        ventasRealizadas.forEach(v => {
+            if (v.proveedorId == prov.id && !v.liquidado) {
+                deudaPendiente += v.pagoProveedor;
+            }
+        });
+
+        contenedor.innerHTML += `
+            <div style="background:#0f172a; padding:12px; border-radius:8px; margin-bottom:12px; border:1px solid #334155;">
+                <strong style="color: #38bdf8; font-size: 1.05rem;">${prov.nombre}</strong><br>
+                <span style="font-size:0.85rem; color:#94a3b8;">Tel: ${prov.telefono || 'No registrado'}</span><br>
+                <div style="margin-top: 6px; font-size: 0.9rem;">
+                    📦 Artículos activos en stock: <strong>${totalStockProv}</strong><br>
+                    💰 Saldo pendiente a pagar: <strong style="color: #f87171;">$${deudaPendiente.toFixed(2)}</strong>
+                </div>
+                <button class="btn-primary" style="margin-top: 10px; padding: 6px 12px; font-size: 0.85rem;" onclick="liquidarProveedor('${prov.id}')">💵 Liquidar y Pagar (Reiniciar a $0)</button>
+            </div>
+        `;
+    });
+}
+
+window.liquidarProveedor = function(provId) {
+    if (!confirm('¿Estás seguro de marcar como pagado y liquidar este proveedor? Esto reiniciará su saldo pendiente a $0.00.')) {
+        return;
+    }
+
+    // Marcar como liquidadas las ventas de este proveedor
+    ventasRealizadas.forEach(v => {
+        if (v.proveedorId == provId) {
+            v.liquidado = true;
+        }
+    });
+
+    localStorage.setItem('pandora_ventas', JSON.stringify(ventasRealizadas));
+    renderProveedoresSaldos();
+    alert('¡Proveedor liquidado con éxito! Saldo reiniciado.');
+};
+
+// ==========================================
+// 3. IMPRESIÓN Y50P
 // ==========================================
 window.imprimirEtiquetasSeleccionadas = async function() {
     const checkboxes = document.querySelectorAll('.check-etiqueta:checked');
@@ -96,7 +153,6 @@ window.imprimirEtiquetasSeleccionadas = async function() {
             const producto = inventario.find(p => p.id === prodId);
             
             if (producto) {
-                // Si aún no tiene código asignado, se lo generamos en este momento (post-autorización)
                 if (!producto.codigo) {
                     producto.codigo = 'PAN-' + Math.floor(100000 + Math.random() * 900000);
                 }
@@ -112,7 +168,6 @@ window.imprimirEtiquetasSeleccionadas = async function() {
             }
         }
 
-        // Guardamos los códigos generados en localStorage
         localStorage.setItem('pandora_inventario', JSON.stringify(inventario));
         renderInventario();
         actualizarSelects();
@@ -141,7 +196,7 @@ function actualizarSelects() {
 }
 
 // ==========================================
-// 2. VENTAS Y REGLA DE DESCUENTO A LA TIENDA
+// 4. VENTAS Y CÁLCULOS CORREGIDOS
 // ==========================================
 window.filtrarOSeleccionarProducto = function() {
     const query = document.getElementById('venta-buscar').value.trim().toLowerCase();
@@ -207,18 +262,21 @@ window.procesarVenta = function() {
     producto.stock -= cantidad;
 
     const subtotalBruto = producto.precio * cantidad;
+    // CÁLCULOS CORRECTOS:
+    const pagoProveedor = subtotalBruto * (1 - (producto.comisionPorc / 100)); 
     const comisionTiendaBruta = subtotalBruto * (producto.comisionPorc / 100);
     const comisionTiendaNeta = comisionTiendaBruta - descuento; 
-    const pagoProveedor = subtotalBruto - comisionTiendaBruta; 
 
     const ventaRecord = {
         folio: Math.floor(1000 + Math.random() * 9000),
         fecha: new Date().toLocaleString(),
         producto: producto.nombre,
+        proveedorId: producto.proveedorId,
         cantidad,
         total: totalVenta,
         gananciaTienda: comisionTiendaNeta > 0 ? comisionTiendaNeta : 0,
-        pagoProveedor
+        pagoProveedor,
+        liquidado: false
     };
 
     ventasRealizadas.push(ventaRecord);
@@ -234,7 +292,7 @@ window.procesarVenta = function() {
 };
 
 // ==========================================
-// 3. INVENTARIO Y CATÁLOGO WHATSAPP LIGERO
+// 5. INVENTARIO Y CATÁLOGO WHATSAPP
 // ==========================================
 function renderInventario() {
     const contenedor = document.getElementById('lista-inventario');
@@ -283,7 +341,7 @@ window.compartirCatalogoWhatsApp = function() {
 };
 
 // ==========================================
-// 4. LISTA DE DESEOS
+// 6. LISTA DE DESEOS
 // ==========================================
 window.guardarDeseo = function() {
     const cliente = document.getElementById('deseo-cliente').value.trim();
@@ -324,7 +382,7 @@ function renderDeseos() {
 };
 
 // ==========================================
-// 5. CORTE DE CAJA Y REPORTES PDF
+// 7. CORTE DE CAJA Y REPORTES PDF
 // ==========================================
 window.cargarReportes = function() {
     let ventasTotales = 0;
@@ -334,7 +392,9 @@ window.cargarReportes = function() {
     ventasRealizadas.forEach(v => {
         ventasTotales += v.total;
         gananciasNetas += v.gananciaTienda;
-        pagarProveedores += v.pagoProveedor;
+        if (!v.liquidado) {
+            pagarProveedores += v.pagoProveedor;
+        }
     });
 
     document.getElementById('rep-ventas').innerText = ventasTotales.toFixed(2);

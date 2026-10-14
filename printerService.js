@@ -29,27 +29,32 @@ class ThermalPrinterService {
             await this.connect();
         }
 
-        let encoder = new TextEncoder();
-        let comandos = '\x1B\x40'; // Inicializar impresora
-        comandos += '\x1B\x61\x01'; // Centrar
-        comandos += 'LA CAJA DE PANDORA\n';
-        comandos += 'Bazar & Consignaciones\n\n';
-        comandos += `Folio: ${ventaData.folio}\n`;
-        comandos += `Fecha: ${ventaData.fecha}\n`;
-        comandos += '--------------------------------\n';
-        comandos += '\x1B\x61\x00'; // Alinear a la izquierda
+        let texto = '\x1B\x40'; // Inicializar impresora ESC/POS
+        texto += '\x1B\x61\x01'; // Centrar
+        texto += 'LA CAJA DE PANDORA\n';
+        texto += 'Bazar & Consignaciones\n\n';
+        texto += `Folio: ${ventaData.folio}\n`;
+        texto += `Fecha: ${ventaData.fecha}\n`;
+        texto += '--------------------------------\n';
+        texto += '\x1B\x61\x00'; // Alinear a la izquierda
 
         ventaData.productos.forEach(p => {
-            comandos += `${p.nombre} x${p.cantidad}\n`;
-            comandos += `  Subtotal: $${(p.precio * p.cantidad).toFixed(2)}\n`;
+            let subtotal = p.precio * p.cantidad;
+            texto += `${p.nombre} x${p.cantidad}\n`;
+            texto += `  Subtotal: $${subtotal.toFixed(2)}\n`;
         });
 
-        comandos += '--------------------------------\n';
-        comandos += `TOTAL: $${ventaData.total.toFixed(2)}\n\n`;
-        comandos += '\x1B\x61\x01'; // Centrar
-        comandos += '¡Gracias por tu compra!\n\n\n';
+        texto += '--------------------------------\n';
+        texto += `TOTAL: $${ventaData.total.toFixed(2)}\n\n`;
+        texto += '\x1B\x61\x01'; // Centrar
+        texto += '¡Gracias por tu compra!\n\n\n';
 
-        await this.characteristic.writeValue(encoder.encode(comandos));
+        // Convertir texto a Uint8Array usando TextEncoder para asegurar envío correcto de bytes
+        let encoder = new TextEncoder();
+        let bytes = encoder.encode(texto);
+
+        // Enviar en bloques si es necesario o directamente
+        await this.characteristic.writeValue(bytes);
     }
 }
 
