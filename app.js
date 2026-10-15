@@ -80,7 +80,7 @@ window.guardarProducto = function() {
 };
 
 // ==========================================
-// 2. GESTIÓN Y DETALLE DE PROVEEDORES Y SALDOS
+// 2. GESTIÓN, DETALLE Y REPORTE DE PROVEEDORES
 // ==========================================
 function renderProveedoresSaldos() {
     const contenedor = document.getElementById('lista-saldos-proveedores');
@@ -100,11 +100,11 @@ function renderProveedoresSaldos() {
         const ventasPendientes = ventasRealizadas.filter(v => v.proveedorId == prov.id && !v.liquidado);
         const deudaPendiente = ventasPendientes.reduce((acc, v) => acc + v.pagoProveedor, 0);
 
-        // Generar lista visual de artículos
+        // Generar lista visual de artículos en tienda
         let listaArticulosHTML = '';
         if (prodProveedor.length > 0) {
             listaArticulosHTML += '<div style="margin-top:8px; padding-top:8px; border-top:1px dashed #334155; font-size:0.85rem;">';
-            listaArticulosHTML += '<strong style="color:#cbd5e1;">📦 Inventario Consignado:</strong><ul style="margin:4px 0 8px 18px; padding:0; color:#94a3b8;">';
+            listaArticulosHTML += '<strong style="color:#cbd5e1;">📦 Artículos en Tienda (Stock):</strong><ul style="margin:4px 0 8px 18px; padding:0; color:#94a3b8;">';
             prodProveedor.forEach(art => {
                 const cod = art.codigo ? `[${art.codigo}] ` : '[Sin código] ';
                 listaArticulosHTML += `<li>${cod}<strong>${art.nombre}</strong> - $${art.precio.toFixed(2)} (Stock: ${art.stock} pz)</li>`;
@@ -114,13 +114,13 @@ function renderProveedoresSaldos() {
             listaArticulosHTML = '<p style="font-size:0.8rem; color:#64748b; margin-top:6px;">Sin productos registrados en stock.</p>';
         }
 
-        // Generar lista visual de ventas pendientes por pagar
+        // Generar lista visual de ventas realizadas por pagar
         let listaVentasHTML = '';
         if (ventasPendientes.length > 0) {
             listaVentasHTML += '<div style="margin-top:6px; font-size:0.85rem;">';
-            listaVentasHTML += '<strong style="color:#fca5a5;">🛍️ Ventas Por Pagar:</strong><ul style="margin:4px 0 8px 18px; padding:0; color:#f87171;">';
+            listaVentasHTML += '<strong style="color:#fca5a5;">🛍️ Artículos Vendidos Por Pagar:</strong><ul style="margin:4px 0 8px 18px; padding:0; color:#f87171;">';
             ventasPendientes.forEach(v => {
-                listaVentasHTML += `<li>${v.producto} (x${v.cantidad}) - Pagar: $${v.pagoProveedor.toFixed(2)}</li>`;
+                listaVentasHTML += `<li>${v.producto} (x${v.cantidad}) - A Pagar: $${v.pagoProveedor.toFixed(2)}</li>`;
             });
             listaVentasHTML += '</ul></div>';
         }
@@ -131,18 +131,58 @@ function renderProveedoresSaldos() {
                 <span style="font-size:0.85rem; color:#94a3b8;">📞 Tel: ${prov.telefono || 'No registrado'}</span><br>
                 
                 <div style="margin-top: 6px; font-size: 0.9rem;">
-                    Total piezas activas: <strong>${totalStockProv}</strong><br>
-                    Saldo pendiente a liquidar: <strong style="color: #f87171; font-size:1rem;">$${deudaPendiente.toFixed(2)}</strong>
+                    Piezas activas en tienda: <strong>${totalStockProv}</strong><br>
+                    Saldo acumulado a pagar: <strong style="color: #f87171; font-size:1rem;">$${deudaPendiente.toFixed(2)}</strong>
                 </div>
 
                 ${listaArticulosHTML}
                 ${listaVentasHTML}
 
-                <button class="btn-primary" style="margin-top: 10px; padding: 8px 14px; font-size: 0.85rem; width:100%;" onclick="liquidarProveedor('${prov.id}')">💵 Liquidar y Pagar (Reiniciar a $0.00)</button>
+                <div style="display:flex; gap:8px; margin-top:10px;">
+                    <button class="btn-accent" style="padding: 8px; font-size: 0.8rem; flex:1;" onclick="exportarEstadoCuentaProveedor('${prov.id}')">📲 Enviar Reporte WhatsApp</button>
+                    <button class="btn-primary" style="padding: 8px; font-size: 0.8rem; flex:1;" onclick="liquidarProveedor('${prov.id}')">💵 Liquidar y Pagar</button>
+                </div>
             </div>
         `;
     });
 }
+
+window.exportarEstadoCuentaProveedor = function(provId) {
+    const prov = proveedores.find(p => p.id == provId);
+    if (!prov) return;
+
+    const prodProveedor = inventario.filter(p => p.proveedorId == prov.id);
+    const ventasPendientes = ventasRealizadas.filter(v => v.proveedorId == prov.id && !v.liquidado);
+    const deudaPendiente = ventasPendientes.reduce((acc, v) => acc + v.pagoProveedor, 0);
+
+    let msg = `📦 *LA CAJA DE PANDORA - ESTADO DE CUENTA*\n`;
+    msg += `👤 *Proveedor:* ${prov.nombre}\n`;
+    msg += `📅 *Fecha:* ${new Date().toLocaleDateString()}\n\n`;
+
+    msg += `🏬 *ARTÍCULOS ACTUALES EN TIENDA:*\n`;
+    if (prodProveedor.length > 0) {
+        prodProveedor.forEach(p => {
+            const cod = p.codigo ? `[${p.codigo}]` : '';
+            msg += `▫️ ${cod} ${p.nombre} - $${p.precio.toFixed(2)} (Stock: ${p.stock})\n`;
+        });
+    } else {
+        msg += `(Sin productos en stock)\n`;
+    }
+
+    msg += `\n💰 *ARTÍCULOS VENDIDOS PENDIENTES DE PAGO:*\n`;
+    if (ventasPendientes.length > 0) {
+        ventasPendientes.forEach(v => {
+            msg += `✅ ${v.producto} (x${v.cantidad}) ➔ A Pagar: $${v.pagoProveedor.toFixed(2)}\n`;
+        });
+        msg += `\n💵 *TOTAL A LIQUIDAR:* *$${deudaPendiente.toFixed(2)}*`;
+    } else {
+        msg += `(Sin ventas pendientes por liquidar)\n`;
+        msg += `\n💵 *TOTAL A LIQUIDAR:* *$0.00*`;
+    }
+
+    const url = `https://api.whatsapp.com/send?phone=${prov.telefono ? prov.telefono.replace(/\D/g,'') : ''}&text=${encodeURIComponent(msg)}`;
+    window.open(url, '_blank');
+};
 
 window.liquidarProveedor = function(provId) {
     const prov = proveedores.find(p => p.id == provId);
@@ -224,7 +264,7 @@ function actualizarSelects() {
 }
 
 // ==========================================
-// 4. VENTAS Y FÓRMULA DE REPARTICIÓN CORREGIDA
+// 4. VENTAS Y FÓRMULA CORREGIDA
 // ==========================================
 window.filtrarOSeleccionarProducto = function() {
     const query = document.getElementById('venta-buscar').value.trim().toLowerCase();
@@ -291,12 +331,10 @@ window.procesarVenta = function() {
 
     const subtotalBruto = producto.precio * cantidad;
 
-    // FÓRMULA CORREGIDA DE CONSIGNACIÓN:
-    // La comisión % es lo que se QUEDA LA TIENDA.
-    // El resto es lo que se LE PAGA AL PROVEEDOR.
+    // FÓRMULA DINÁMICA DE CONSIGNACIÓN:
     const comisionTiendaBruta = subtotalBruto * (producto.comisionPorc / 100);
-    const pagoProveedor = subtotalBruto - comisionTiendaBruta; // Ej: $40 - $8 = $32 para proveedor
-    const comisionTiendaNeta = comisionTiendaBruta - descuento; // El descuento afecta solo a la ganancia de la tienda
+    const pagoProveedor = subtotalBruto - comisionTiendaBruta; 
+    const comisionTiendaNeta = comisionTiendaBruta - descuento; 
 
     const ventaRecord = {
         folio: Math.floor(1000 + Math.random() * 9000),
