@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pandora-store-v6';
+const CACHE_NAME = 'pandora-store-v7';
 const urlsToCache = [
   '/',
   '/index.html',

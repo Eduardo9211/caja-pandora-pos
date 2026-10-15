@@ -80,7 +80,7 @@ window.guardarProducto = function() {
 };
 
 // ==========================================
-// 2. GESTIÓN, DETALLE Y REPORTE DE PROVEEDORES
+// 2. GESTIÓN Y DETALLE DE PROVEEDORES
 // ==========================================
 function renderProveedoresSaldos() {
     const contenedor = document.getElementById('lista-saldos-proveedores');
@@ -260,7 +260,7 @@ function actualizarSelects() {
 }
 
 // ==========================================
-// 4. VENTAS Y FÓRMULA CORREGIDA
+// 4. VENTAS Y FÓRMULA
 // ==========================================
 window.filtrarOSeleccionarProducto = function() {
     const query = document.getElementById('venta-buscar').value.trim().toLowerCase();
@@ -332,6 +332,7 @@ window.procesarVenta = function() {
     const comisionTiendaNeta = comisionTiendaBruta - descuento; 
 
     const ventaRecord = {
+        idVenta: Date.now(),
         folio: Math.floor(1000 + Math.random() * 9000),
         fecha: new Date().toLocaleString(),
         producto: producto.nombre,
@@ -431,7 +432,7 @@ function renderDeseos() {
     const contenedor = document.getElementById('lista-deseos');
     contenedor.innerHTML = '';
     if (deseos.length === 0) {
-        contenedor.innerHTML = '<p style="color:#94a3b8; font-size:0.9rem;">Sin solicitudes pendientes.</p>';
+        contenedor.innerHTML = '<p style="color:#94a3b8; font-size:0.9rem;">No hay solicitudes pendientes.</p>';
         return;
     }
 
@@ -446,7 +447,7 @@ function renderDeseos() {
 };
 
 // ==========================================
-// 7. CORTE DE CAJA, REINICIO Y REPORTES PDF
+// 7. CORTE DE CAJA, REINICIO, HISTORIAL Y REPORTES PDF
 // ==========================================
 window.cargarReportes = function() {
     let ventasTotales = 0;
@@ -464,6 +465,79 @@ window.cargarReportes = function() {
     document.getElementById('rep-ventas').innerText = ventasTotales.toFixed(2);
     document.getElementById('rep-ganancias').innerText = gananciasNetas.toFixed(2);
     document.getElementById('rep-proveedores').innerText = pagarProveedores.toFixed(2);
+
+    renderHistorialVentas();
+};
+
+function renderHistorialVentas() {
+    const contenedor = document.getElementById('lista-historial-ventas');
+    if (!contenedor) return;
+    contenedor.innerHTML = '';
+
+    if (ventasRealizadas.length === 0) {
+        contenedor.innerHTML = '<p style="color:#94a3b8; font-size:0.9rem;">No hay ventas registradas en el periodo.</p>';
+        return;
+    }
+
+    // Mostrar las ventas en orden inverso (más recientes primero)
+    [...ventasRealizadas].reverse().forEach(v => {
+        const estadoLiquidado = v.liquidado ? '<span style="color:#38bdf8;">[Ya Liquidado]</span>' : '<span style="color:#f87171;">[Pendiente de Pago]</span>';
+        contenedor.innerHTML += `
+            <div style="background:#0f172a; padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid #334155; font-size:0.85rem; display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <strong>Folio #${v.folio}</strong> - ${v.fecha}<br>
+                    📦 ${v.producto} (x${v.cantidad}) ➔ Total: $${v.total.toFixed(2)}<br>
+                    ${estadoLiquidado}
+                </div>
+                <div>
+                    <button style="background:#ef4444; color:white; border:none; padding:6px 10px; border-radius:6px; font-size:0.75rem; cursor:pointer;" onclick="devolverVenta(${v.idVenta || v.folio})">🔄 Devolución</button>
+                </div>
+            </div>
+        `;
+    });
+}
+
+window.devolverVenta = function(idVenta) {
+    const index = ventasRealizadas.findIndex(v => (v.idVenta === idVenta || v.folio === idVenta));
+    if (index === -1) {
+        alert('No se encontró el registro de la venta.');
+        return;
+    }
+
+    const venta = ventasRealizadas[index];
+
+    if (venta.liquidado) {
+        alert('⚠️ Esta venta ya fue liquidada al proveedor. No se puede realizar la devolución automática hasta que ajustes cuentas con él.');
+        return;
+    }
+
+    if (!confirm(`¿Confirmas la devolución de "${venta.producto}" (Folio #${venta.folio})? Esto regresará las piezas al inventario y restará el adeudo al proveedor.`)) {
+        return;
+    }
+
+    // 1. Devolver stock al producto en inventario (si existe)
+    const productoInventario = inventario.find(p => p.nombre.toLowerCase() === venta.producto.toLowerCase() || p.id === venta.proveedorId);
+    if (productoInventario) {
+        productoInventario.stock += venta.cantidad;
+    } else {
+        // Si no lo encuentra por nombre exacto, buscamos por proveedor y nombre parcial o creamos un aviso
+        const altProd = inventario.find(p => p.proveedorId == venta.proveedorId);
+        if (altProd) {
+            altProd.stock += venta.cantidad;
+        }
+    }
+
+    // 2. Eliminar la venta del arreglo
+    ventasRealizadas.splice(index, 1);
+
+    // 3. Guardar cambios
+    localStorage.setItem('pandora_ventas', JSON.stringify(ventasRealizadas));
+    localStorage.setItem('pandora_inventario', JSON.stringify(inventario));
+
+    // 4. Actualizar pantallas
+    cargarReportes();
+    actualizarSelects();
+    alert('¡Devolución procesada con éxito! Stock restaurado y saldo del proveedor ajustado.');
 };
 
 window.reiniciarHistorialCaja = function() {
