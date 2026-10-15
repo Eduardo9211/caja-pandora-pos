@@ -36,7 +36,7 @@ window.guardarProveedor = function() {
         return;
     }
 
-    const proveedor = { id: Date.now(), nombre, telefono, saldoLiquidado: 0 };
+    const proveedor = { id: Date.now(), nombre, telefono };
     proveedores.push(proveedor);
     localStorage.setItem('pandora_proveedores', JSON.stringify(proveedores));
 
@@ -80,7 +80,7 @@ window.guardarProducto = function() {
 };
 
 // ==========================================
-// 2. GESTIÓN Y LIQUIDACIÓN DE PROVEEDORES
+// 2. GESTIÓN Y DETALLE DE PROVEEDORES Y SALDOS
 // ==========================================
 function renderProveedoresSaldos() {
     const contenedor = document.getElementById('lista-saldos-proveedores');
@@ -92,38 +92,66 @@ function renderProveedoresSaldos() {
     }
 
     proveedores.forEach(prov => {
-        // Calcular productos del proveedor y monto pendiente basado en ventas
+        // Artículos en consigna pertenecientes a este proveedor
         const prodProveedor = inventario.filter(p => p.proveedorId == prov.id);
         const totalStockProv = prodProveedor.reduce((acc, p) => acc + p.stock, 0);
 
-        // Sumar lo que se le debe a este proveedor de las ventas realizadas
-        let deudaPendiente = 0;
-        ventasRealizadas.forEach(v => {
-            if (v.proveedorId == prov.id && !v.liquidado) {
-                deudaPendiente += v.pagoProveedor;
-            }
-        });
+        // Ventas pendientes de liquidar a este proveedor
+        const ventasPendientes = ventasRealizadas.filter(v => v.proveedorId == prov.id && !v.liquidado);
+        const deudaPendiente = ventasPendientes.reduce((acc, v) => acc + v.pagoProveedor, 0);
+
+        // Generar lista visual de artículos
+        let listaArticulosHTML = '';
+        if (prodProveedor.length > 0) {
+            listaArticulosHTML += '<div style="margin-top:8px; padding-top:8px; border-top:1px dashed #334155; font-size:0.85rem;">';
+            listaArticulosHTML += '<strong style="color:#cbd5e1;">📦 Inventario Consignado:</strong><ul style="margin:4px 0 8px 18px; padding:0; color:#94a3b8;">';
+            prodProveedor.forEach(art => {
+                const cod = art.codigo ? `[${art.codigo}] ` : '[Sin código] ';
+                listaArticulosHTML += `<li>${cod}<strong>${art.nombre}</strong> - $${art.precio.toFixed(2)} (Stock: ${art.stock} pz)</li>`;
+            });
+            listaArticulosHTML += '</ul></div>';
+        } else {
+            listaArticulosHTML = '<p style="font-size:0.8rem; color:#64748b; margin-top:6px;">Sin productos registrados en stock.</p>';
+        }
+
+        // Generar lista visual de ventas pendientes por pagar
+        let listaVentasHTML = '';
+        if (ventasPendientes.length > 0) {
+            listaVentasHTML += '<div style="margin-top:6px; font-size:0.85rem;">';
+            listaVentasHTML += '<strong style="color:#fca5a5;">🛍️ Ventas Por Pagar:</strong><ul style="margin:4px 0 8px 18px; padding:0; color:#f87171;">';
+            ventasPendientes.forEach(v => {
+                listaVentasHTML += `<li>${v.producto} (x${v.cantidad}) - Pagar: $${v.pagoProveedor.toFixed(2)}</li>`;
+            });
+            listaVentasHTML += '</ul></div>';
+        }
 
         contenedor.innerHTML += `
             <div style="background:#0f172a; padding:12px; border-radius:8px; margin-bottom:12px; border:1px solid #334155;">
                 <strong style="color: #38bdf8; font-size: 1.05rem;">${prov.nombre}</strong><br>
-                <span style="font-size:0.85rem; color:#94a3b8;">Tel: ${prov.telefono || 'No registrado'}</span><br>
+                <span style="font-size:0.85rem; color:#94a3b8;">📞 Tel: ${prov.telefono || 'No registrado'}</span><br>
+                
                 <div style="margin-top: 6px; font-size: 0.9rem;">
-                    📦 Artículos activos en stock: <strong>${totalStockProv}</strong><br>
-                    💰 Saldo pendiente a pagar: <strong style="color: #f87171;">$${deudaPendiente.toFixed(2)}</strong>
+                    Total piezas activas: <strong>${totalStockProv}</strong><br>
+                    Saldo pendiente a liquidar: <strong style="color: #f87171; font-size:1rem;">$${deudaPendiente.toFixed(2)}</strong>
                 </div>
-                <button class="btn-primary" style="margin-top: 10px; padding: 6px 12px; font-size: 0.85rem;" onclick="liquidarProveedor('${prov.id}')">💵 Liquidar y Pagar (Reiniciar a $0)</button>
+
+                ${listaArticulosHTML}
+                ${listaVentasHTML}
+
+                <button class="btn-primary" style="margin-top: 10px; padding: 8px 14px; font-size: 0.85rem; width:100%;" onclick="liquidarProveedor('${prov.id}')">💵 Liquidar y Pagar (Reiniciar a $0.00)</button>
             </div>
         `;
     });
 }
 
 window.liquidarProveedor = function(provId) {
-    if (!confirm('¿Estás seguro de marcar como pagado y liquidar este proveedor? Esto reiniciará su saldo pendiente a $0.00.')) {
+    const prov = proveedores.find(p => p.id == provId);
+    const nombreProv = prov ? prov.nombre : 'este proveedor';
+
+    if (!confirm(`¿Confirmas liquidar el pago a ${nombreProv}? Esto marcará las ventas como pagadas y reiniciará su saldo pendiente a $0.00.`)) {
         return;
     }
 
-    // Marcar como liquidadas las ventas de este proveedor
     ventasRealizadas.forEach(v => {
         if (v.proveedorId == provId) {
             v.liquidado = true;
@@ -132,7 +160,7 @@ window.liquidarProveedor = function(provId) {
 
     localStorage.setItem('pandora_ventas', JSON.stringify(ventasRealizadas));
     renderProveedoresSaldos();
-    alert('¡Proveedor liquidado con éxito! Saldo reiniciado.');
+    alert(`¡Saldo de ${nombreProv} liquidado exitosamente!`);
 };
 
 // ==========================================
@@ -196,7 +224,7 @@ function actualizarSelects() {
 }
 
 // ==========================================
-// 4. VENTAS Y CÁLCULOS CORREGIDOS
+// 4. VENTAS Y FÓRMULA DE REPARTICIÓN CORREGIDA
 // ==========================================
 window.filtrarOSeleccionarProducto = function() {
     const query = document.getElementById('venta-buscar').value.trim().toLowerCase();
@@ -262,10 +290,13 @@ window.procesarVenta = function() {
     producto.stock -= cantidad;
 
     const subtotalBruto = producto.precio * cantidad;
-    // CÁLCULOS CORRECTOS:
-    const pagoProveedor = subtotalBruto * (1 - (producto.comisionPorc / 100)); 
+
+    // FÓRMULA CORREGIDA DE CONSIGNACIÓN:
+    // La comisión % es lo que se QUEDA LA TIENDA.
+    // El resto es lo que se LE PAGA AL PROVEEDOR.
     const comisionTiendaBruta = subtotalBruto * (producto.comisionPorc / 100);
-    const comisionTiendaNeta = comisionTiendaBruta - descuento; 
+    const pagoProveedor = subtotalBruto - comisionTiendaBruta; // Ej: $40 - $8 = $32 para proveedor
+    const comisionTiendaNeta = comisionTiendaBruta - descuento; // El descuento afecta solo a la ganancia de la tienda
 
     const ventaRecord = {
         folio: Math.floor(1000 + Math.random() * 9000),
@@ -275,7 +306,7 @@ window.procesarVenta = function() {
         cantidad,
         total: totalVenta,
         gananciaTienda: comisionTiendaNeta > 0 ? comisionTiendaNeta : 0,
-        pagoProveedor,
+        pagoProveedor: pagoProveedor > 0 ? pagoProveedor : 0,
         liquidado: false
     };
 

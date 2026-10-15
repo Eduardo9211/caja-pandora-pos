@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pandora-store-v3';
+const CACHE_NAME = 'pandora-store-v4';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -10,7 +10,7 @@ const urlsToCache = [
 ];
 
 self.addEventListener('install', (event) => {
-  self.skipWaiting(); // Fuerza la instalación inmediata del nuevo Service Worker
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(urlsToCache);
@@ -24,16 +24,15 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName); // Borra la memoria caché vieja
+            return caches.delete(cacheName);
           }
         })
       );
-    }).then(() => self.clients.claim()) // Toma el control de la app de inmediato
+    }).then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', (event) => {
-  // Primero intenta obtener la versión más reciente de la red (Render)
   event.respondWith(
     fetch(event.request)
       .then((networkResponse) => {
@@ -43,7 +42,6 @@ self.addEventListener('fetch', (event) => {
         });
       })
       .catch(() => {
-        // Si no hay internet, recurre a la caché local
         return caches.match(event.request);
       })
   );
