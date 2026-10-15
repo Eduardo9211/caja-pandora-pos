@@ -85,7 +85,7 @@
             </div>
         </div>
 
-        <!-- TAB 3: PROVEEDORES Y SALDOS (NUEVA PESTAÑA) -->
+        <!-- TAB 3: PROVEEDORES Y SALDOS -->
         <div id="tab-saldos-prov" class="tab-content">
             <div class="card">
                 <h2>Control y Liquidación de Proveedores</h2>
@@ -146,16 +146,18 @@
                 <div class="total-box" style="text-align: left; margin-bottom: 12px; color: #f87171;">
                     A pagar a Proveedores: $<span id="rep-proveedores">0.00</span>
                 </div>
-                <button class="btn-primary" onclick="cargarReportes()" style="margin-bottom: 10px;">Actualizar Reporte</button>
                 
-                <!-- BOTÓN PARA DESCARGAR REPORTE EN PDF -->
-                <button class="btn-accent" onclick="generarReporteCortePDF()">📄 Descargar Reporte PDF</button>
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
+                    <button class="btn-primary" onclick="cargarReportes()">🔄 Actualizar Reporte</button>
+                    <button class="btn-accent" onclick="generarReporteCortePDF()">📄 Descargar Reporte PDF</button>
+                    <button style="background: #ef4444; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; margin-top: 10px; cursor: pointer;" onclick="reiniciarHistorialCaja()">⚠️ Reiniciar Caja / Limpiar Ventas Pasadas</button>
+                </div>
             </div>
         </div>
 
     </div>
 
-    <!-- NAVEGACIÓN INFERIOR (6 BOTONES) -->
+    <!-- NAVEGACIÓN INFERIOR -->
     <nav style="display: flex; justify-content: space-around; overflow-x: auto;">
         <button class="nav-btn active" onclick="cambiarTab('ventas', this)">
             <span>🛒</span>

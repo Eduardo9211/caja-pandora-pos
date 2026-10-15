@@ -92,15 +92,12 @@ function renderProveedoresSaldos() {
     }
 
     proveedores.forEach(prov => {
-        // Artículos en consigna pertenecientes a este proveedor
         const prodProveedor = inventario.filter(p => p.proveedorId == prov.id);
         const totalStockProv = prodProveedor.reduce((acc, p) => acc + p.stock, 0);
 
-        // Ventas pendientes de liquidar a este proveedor
         const ventasPendientes = ventasRealizadas.filter(v => v.proveedorId == prov.id && !v.liquidado);
         const deudaPendiente = ventasPendientes.reduce((acc, v) => acc + v.pagoProveedor, 0);
 
-        // Generar lista visual de artículos en tienda
         let listaArticulosHTML = '';
         if (prodProveedor.length > 0) {
             listaArticulosHTML += '<div style="margin-top:8px; padding-top:8px; border-top:1px dashed #334155; font-size:0.85rem;">';
@@ -114,7 +111,6 @@ function renderProveedoresSaldos() {
             listaArticulosHTML = '<p style="font-size:0.8rem; color:#64748b; margin-top:6px;">Sin productos registrados en stock.</p>';
         }
 
-        // Generar lista visual de ventas realizadas por pagar
         let listaVentasHTML = '';
         if (ventasPendientes.length > 0) {
             listaVentasHTML += '<div style="margin-top:6px; font-size:0.85rem;">';
@@ -331,7 +327,6 @@ window.procesarVenta = function() {
 
     const subtotalBruto = producto.precio * cantidad;
 
-    // FÓRMULA DINÁMICA DE CONSIGNACIÓN:
     const comisionTiendaBruta = subtotalBruto * (producto.comisionPorc / 100);
     const pagoProveedor = subtotalBruto - comisionTiendaBruta; 
     const comisionTiendaNeta = comisionTiendaBruta - descuento; 
@@ -451,7 +446,7 @@ function renderDeseos() {
 };
 
 // ==========================================
-// 7. CORTE DE CAJA Y REPORTES PDF
+// 7. CORTE DE CAJA, REINICIO Y REPORTES PDF
 // ==========================================
 window.cargarReportes = function() {
     let ventasTotales = 0;
@@ -469,6 +464,22 @@ window.cargarReportes = function() {
     document.getElementById('rep-ventas').innerText = ventasTotales.toFixed(2);
     document.getElementById('rep-ganancias').innerText = gananciasNetas.toFixed(2);
     document.getElementById('rep-proveedores').innerText = pagarProveedores.toFixed(2);
+};
+
+window.reiniciarHistorialCaja = function() {
+    if (!confirm('⚠️ ¿Estás seguro de que deseas reiniciar la caja? Esto BORRARÁ permanentemente todo el historial de ventas anteriores y pondrá el corte a $0.00.')) {
+        return;
+    }
+
+    if (!confirm('CONFIRMACIÓN FINAL: Se eliminarán los registros de ventas pasadas. ¿Deseas continuar?')) {
+        return;
+    }
+
+    ventasRealizadas = [];
+    localStorage.setItem('pandora_ventas', JSON.stringify(ventasRealizadas));
+    cargarReportes();
+    renderProveedoresSaldos();
+    alert('¡Historial de ventas reiniciado con éxito! El corte de caja está nuevamente en $0.00.');
 };
 
 window.generarReporteCortePDF = function() {
