@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pandora-store-v2';
+const CACHE_NAME = 'pandora-store-v3';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -33,9 +33,18 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Primero intenta obtener la versión más reciente de la red (Render)
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
-    })
+    fetch(event.request)
+      .then((networkResponse) => {
+        return caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, networkResponse.clone());
+          return networkResponse;
+        });
+      })
+      .catch(() => {
+        // Si no hay internet, recurre a la caché local
+        return caches.match(event.request);
+      })
   );
 });
