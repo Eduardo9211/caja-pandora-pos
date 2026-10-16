@@ -80,7 +80,7 @@ window.guardarProducto = function() {
 };
 
 // ==========================================
-// 2. GESTIÓN Y DETALLE DE PROVEEDORES
+// 2. GESTIÓN Y DETALLE DE PROVEEDORES (SOLO PDF)
 // ==========================================
 function renderProveedoresSaldos() {
     const contenedor = document.getElementById('lista-saldos-proveedores');
@@ -135,9 +135,8 @@ function renderProveedoresSaldos() {
                 ${listaVentasHTML}
 
                 <div style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
-                    <button class="btn-accent" style="padding: 8px; font-size: 0.8rem;" onclick="exportarEstadoCuentaProveedorWhatsApp('${prov.id}')">📲 Enviar Reporte WhatsApp</button>
-                    <button class="btn-primary" style="padding: 8px; font-size: 0.8rem;" onclick="exportarEstadoCuentaProveedorPDF('${prov.id}')">📄 Descargar Estado de Cuenta PDF</button>
-                    <button style="background:#10b981; color:white; border:none; padding:8px; border-radius:6px; font-size:0.8rem; font-weight:bold; cursor:pointer;" onclick="liquidarProveedor('${prov.id}')">💵 Liquidar y Pagar</button>
+                    <button class="btn-primary" style="padding: 10px; font-size: 0.85rem;" onclick="exportarEstadoCuentaProveedorPDF('${prov.id}')">📄 Descargar Estado de Cuenta PDF</button>
+                    <button style="background:#10b981; color:white; border:none; padding:10px; border-radius:6px; font-size:0.85rem; font-weight:bold; cursor:pointer;" onclick="liquidarProveedor('${prov.id}')">💵 Liquidar y Pagar</button>
                 </div>
             </div>
         `;
@@ -153,43 +152,6 @@ window.exportarEstadoCuentaProveedorPDF = function(provId) {
     const deudaPendiente = ventasPendientes.reduce((acc, v) => acc + v.pagoProveedor, 0);
 
     generarEstadoCuentaProveedorPDF(prov, prodProveedor, ventasPendientes, deudaPendiente);
-};
-
-window.exportarEstadoCuentaProveedorWhatsApp = function(provId) {
-    const prov = proveedores.find(p => p.id == provId);
-    if (!prov) return;
-
-    const prodProveedor = inventario.filter(p => p.proveedorId == prov.id);
-    const ventasPendientes = ventasRealizadas.filter(v => v.proveedorId == prov.id && !v.liquidado);
-    const deudaPendiente = ventasPendientes.reduce((acc, v) => acc + v.pagoProveedor, 0);
-
-    let msg = `📦 *LA CAJA DE PANDORA - ESTADO DE CUENTA*\n`;
-    msg += `👤 *Proveedor:* ${prov.nombre}\n`;
-    msg += `📅 *Fecha:* ${new Date().toLocaleDateString()}\n\n`;
-
-    msg += `🏬 *ARTÍCULOS ACTUALES EN TIENDA:*\n`;
-    if (prodProveedor.length > 0) {
-        prodProveedor.forEach(p => {
-            const cod = p.codigo ? `[${p.codigo}]` : '';
-            msg += `▫️ ${cod} ${p.nombre} - $${p.precio.toFixed(2)} (Stock: ${p.stock})\n`;
-        });
-    } else {
-        msg += `(Sin productos en stock)\n`;
-    }
-
-    msg += `\n💰 *ARTÍCULOS VENDIDOS PENDIENTES DE PAGO:*\n`;
-    if (ventasPendientes.length > 0) {
-        ventasPendientes.forEach(v => {
-            msg += `✅ ${v.producto} (x${v.cantidad}) ➔ A Pagar: $${v.pagoProveedor.toFixed(2)}\n`;
-        });
-        msg += `\n💵 *TOTAL A LIQUIDAR:* *$${deudaPendiente.toFixed(2)}*`;
-    } else {
-        msg += `(Sin ventas pendientes por liquidar)\n`;
-        msg += `\n💵 *TOTAL A LIQUIDAR:* *$0.00*`;
-    }
-
-    const url = `https://api.whatsapp.com/send?phone=${prov.telefono ? prov.telefono.replace(/\D/g,'') : ''}&text=${encodeURIComponent(msg)}`;
-    window.open(url, '_blank');
 };
 
 window.liquidarProveedor = function(provId) {
