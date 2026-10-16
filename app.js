@@ -5,15 +5,73 @@ let proveedores = JSON.parse(localStorage.getItem('pandora_proveedores')) || [];
 let inventario = JSON.parse(localStorage.getItem('pandora_inventario')) || [];
 let deseos = JSON.parse(localStorage.getItem('pandora_deseos')) || [];
 let ventasRealizadas = JSON.parse(localStorage.getItem('pandora_ventas')) || [];
+let bitacora = JSON.parse(localStorage.getItem('pandora_bitacora')) || [];
 
 // ==========================================
-// AUTENTICACIÓN, ROLES Y PERMISOS
+// AUTENTICACIÓN, ROLES Y BITÁCORA
 // ==========================================
 let usuarios = JSON.parse(localStorage.getItem('pandora_usuarios')) || [
     { id: 1, nombre: 'Carlos (Admin)', username: 'admin', password: 'pandora123', rol: 'admin' }
 ];
 
 let usuarioActual = JSON.parse(localStorage.getItem('pandora_usuario_activo')) || null;
+
+function registrarBitacora(accion, detalle) {
+    const nuevoEvento = {
+        id: Date.now(),
+        fecha: new Date().toLocaleString(),
+        usuario: usuarioActual ? usuarioActual.nombre : 'Sistema',
+        accion,
+        detalle
+    };
+    bitacora.unshift(nuevoEvento); // Insertar al inicio (más reciente primero)
+    // Mantener un límite de los últimos 200 eventos para no saturar memoria
+    if (bitacora.length > 200) bitacora.pop();
+    localStorage.setItem('pandora_bitacora', JSON.stringify(bitacora));
+}
+
+function renderBitacora() {
+    const contenedor = document.getElementById('lista-bitacora');
+    if (!contenedor) return;
+    contenedor.innerHTML = '';
+
+    const filtro = (document.getElementById('buscar-bitacora')?.value || '').trim().toLowerCase();
+
+    const eventosFiltrados = bitacora.filter(e => 
+        e.usuario.toLowerCase().includes(filtro) || 
+        e.accion.toLowerCase().includes(filtro) || 
+        e.detalle.toLowerCase().includes(filtro) ||
+        e.fecha.toLowerCase().includes(filtro)
+    );
+
+    if (eventosFiltrados.length === 0) {
+        contenedor.innerHTML = '<p style="color:#94a3b8; font-size:0.8rem;">Sin movimientos registrados.</p>';
+        return;
+    }
+
+    eventosFiltrados.forEach(e => {
+        contenedor.innerHTML += `
+            <div style="background:#0f172a; padding:8px 10px; border-radius:6px; margin-bottom:6px; border:1px solid #334155; font-size:0.78rem;">
+                <div style="display:flex; justify-content:space-between; color:#38bdf8; font-weight:bold;">
+                    <span>👤 ${e.usuario}</span>
+                    <span style="color:#94a3b8; font-weight:normal;">⏱️ ${e.fecha}</span>
+                </div>
+                <div style="color:#e2e8f0; margin-top:2px;">
+                    <strong>${e.accion}:</strong> ${e.detalle}
+                </div>
+            </div>
+        `;
+    });
+}
+
+window.renderBitacora = renderBitacora;
+
+window.limpiarBitacora = function() {
+    if (!confirm('¿Confirmas borrar el historial de auditoría y movimientos?')) return;
+    bitacora = [];
+    localStorage.setItem('pandora_bitacora', JSON.stringify(bitacora));
+    renderBitacora();
+};
 
 window.iniciarSesion = function() {
     const userIn = document.getElementById('login-usuario').value.trim().toLowerCase();
@@ -26,6 +84,7 @@ window.iniciarSesion = function() {
         usuarioActual = usuarioEncontrado;
         localStorage.setItem('pandora_usuario_activo', JSON.stringify(usuarioActual));
         errorEl.style.display = 'none';
+        registrarBitacora('Inicio de Sesión', 'Acceso concedido al sistema POS.');
         verificarEstadoSesion();
     } else {
         errorEl.innerText = 'Usuario o contraseña incorrectos.';
@@ -34,6 +93,9 @@ window.iniciarSesion = function() {
 };
 
 window.cerrarSesion = function() {
+    if (usuarioActual) {
+        registrarBitacora('Cierre de Sesión', 'El usuario salió del sistema.');
+    }
     usuarioActual = null;
     localStorage.removeItem('pandora_usuario_activo');
     verificarEstadoSesion();
@@ -58,7 +120,6 @@ function verificarEstadoSesion() {
 
 function aplicarPermisosRol() {
     const esAdmin = usuarioActual && usuarioActual.rol === 'admin';
-
     const selectorOcultar = esAdmin ? [] : ['.nav-tab-proveedores', '.nav-tab-saldos-prov', '.nav-tab-reportes', '.nav-tab-admin'];
 
     document.querySelectorAll('.nav-btn').forEach(btn => btn.style.display = 'flex');
@@ -71,6 +132,7 @@ function aplicarPermisosRol() {
         cambiarTab('ventas', document.querySelector('.nav-tab-ventas'));
     } else {
         renderUsuarios();
+        renderBitacora();
     }
 }
 
@@ -92,6 +154,8 @@ window.crearUsuario = function() {
 
     usuarios.push({ id: Date.now(), nombre, username, password, rol });
     localStorage.setItem('pandora_usuarios', JSON.stringify(usuarios));
+
+    registrarBitacora('Alta de Usuario', `Se creó el usuario @${username} (${nombre}) con rol ${rol.toUpperCase()}`);
 
     document.getElementById('newUser-nombre').value = '';
     document.getElementById('newUser-username').value = '';
@@ -120,7 +184,13 @@ function renderUsuarios() {
 }
 
 window.eliminarUsuario = function(id) {
+    const userToDelete = usuarios.find(u => u.id === id);
     if (!confirm('¿Seguro que deseas eliminar este usuario?')) return;
+    
+    if (userToDelete) {
+        registrarBitacora('Eliminación de Usuario', `Se eliminó al usuario @${userToDelete.username}`);
+    }
+
     usuarios = usuarios.filter(u => u.id !== id);
     localStorage.setItem('pandora_usuarios', JSON.stringify(usuarios));
     renderUsuarios();
@@ -141,7 +211,7 @@ window.cambiarTab = function(tabName, element) {
     if (tabName === 'saldos-prov') renderProveedoresSaldos();
     if (tabName === 'deseos') renderDeseos();
     if (tabName === 'reportes') cargarReportes();
-    if (tabName === 'admin') renderUsuarios();
+    if (tabName === 'admin') { renderUsuarios(); renderBitacora(); }
     if (tabName === 'ventas' || tabName === 'proveedores') actualizarSelects();
 };
 
@@ -161,6 +231,8 @@ window.guardarProveedor = function() {
     proveedores.push(proveedor);
     localStorage.setItem('pandora_proveedores', JSON.stringify(proveedores));
 
+    registrarBitacora('Alta de Proveedor', `Se registró al proveedor "${nombre}" (Tel: ${telefono || 'Sin tel'})`);
+
     document.getElementById('prov-nombre').value = '';
     document.getElementById('prov-telefono').value = '';
     actualizarSelects();
@@ -179,6 +251,8 @@ window.guardarProducto = function() {
         return;
     }
 
+    const prov = proveedores.find(p => p.id == proveedorId);
+
     const producto = {
         id: Date.now(),
         codigo: null,
@@ -191,6 +265,8 @@ window.guardarProducto = function() {
 
     inventario.push(producto);
     localStorage.setItem('pandora_inventario', JSON.stringify(inventario));
+
+    registrarBitacora('Ingreso de Producto', `Se ingresó "${nombre}" (x${stock} pz) a $${precio.toFixed(2)} [Comisión: ${comisionPorc}%] - Proveedor: ${prov ? prov.nombre : 'General'}`);
 
     document.getElementById('prod-nombre').value = '';
     document.getElementById('prod-precio').value = '';
@@ -272,6 +348,7 @@ window.exportarEstadoCuentaProveedorPDF = function(provId) {
     const ventasPendientes = ventasRealizadas.filter(v => v.proveedorId == prov.id && !v.liquidado);
     const deudaPendiente = ventasPendientes.reduce((acc, v) => acc + v.pagoProveedor, 0);
 
+    registrarBitacora('Generación de PDF', `Se descargó el Estado de Cuenta PDF de ${prov.nombre}`);
     generarEstadoCuentaProveedorPDF(prov, prodProveedor, ventasPendientes, deudaPendiente);
 };
 
@@ -283,13 +360,18 @@ window.liquidarProveedor = function(provId) {
         return;
     }
 
+    let totalLiquidado = 0;
     ventasRealizadas.forEach(v => {
-        if (v.proveedorId == provId) {
+        if (v.proveedorId == provId && !v.liquidado) {
             v.liquidado = true;
+            totalLiquidado += v.pagoProveedor;
         }
     });
 
     localStorage.setItem('pandora_ventas', JSON.stringify(ventasRealizadas));
+
+    registrarBitacora('Liquidación a Proveedor', `Se liquidó el saldo pendiente de ${nombreProv} por $${totalLiquidado.toFixed(2)}`);
+
     renderProveedoresSaldos();
     alert(`¡Saldo de ${nombreProv} liquidado exitosamente!`);
 };
@@ -322,6 +404,8 @@ window.imprimirEtiquetasSeleccionadas = async function() {
                     productos: [{ nombre: producto.nombre, cantidad: 1, precio: producto.precio }],
                     total: producto.precio
                 });
+
+                registrarBitacora('Impresión de Etiqueta', `Se imprimió código ${producto.codigo} para "${producto.nombre}"`);
                 
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
@@ -445,6 +529,8 @@ window.procesarVenta = function() {
     localStorage.setItem('pandora_ventas', JSON.stringify(ventasRealizadas));
     localStorage.setItem('pandora_inventario', JSON.stringify(inventario));
 
+    registrarBitacora('Venta Registrada', `Cobro de "${producto.nombre}" (x${cantidad}) por $${totalVenta.toFixed(2)} [Folio #${ventaRecord.folio}]`);
+
     alert('¡Venta registrada con éxito!');
     document.getElementById('venta-cantidad').value = '1';
     document.getElementById('venta-descuento').value = '0.00';
@@ -491,6 +577,7 @@ window.generarCatalogoPDF = function() {
         alert('No hay productos en el inventario para generar el catálogo.');
         return;
     }
+    registrarBitacora('Generación de PDF', 'Se descargó el Catálogo de Productos en PDF.');
     generarCatalogoPDF(inventario);
 };
 
@@ -509,6 +596,8 @@ window.guardarDeseo = function() {
 
     deseos.push({ id: Date.now(), cliente, telefono, producto });
     localStorage.setItem('pandora_deseos', JSON.stringify(deseos));
+
+    registrarBitacora('Lista de Deseos', `Cliente "${cliente}" solicita "${producto}"`);
 
     document.getElementById('deseo-cliente').value = '';
     document.getElementById('deseo-telefono').value = '';
@@ -624,6 +713,8 @@ window.devolverVenta = function(idVenta) {
     localStorage.setItem('pandora_ventas', JSON.stringify(ventasRealizadas));
     localStorage.setItem('pandora_inventario', JSON.stringify(inventario));
 
+    registrarBitacora('Devolución de Venta', `Se canceló la venta Folio #${venta.folio} ("${venta.producto}") por $${venta.total.toFixed(2)} y se restauró el stock.`);
+
     cargarReportes();
     actualizarSelects();
     alert('¡Devolución procesada con éxito! Stock restaurado y saldo del proveedor ajustado.');
@@ -640,6 +731,9 @@ window.reiniciarHistorialCaja = function() {
 
     ventasRealizadas = [];
     localStorage.setItem('pandora_ventas', JSON.stringify(ventasRealizadas));
+
+    registrarBitacora('Reinicio de Caja', 'Se eliminó el historial de ventas y se reinició el corte a $0.00');
+
     cargarReportes();
     renderProveedoresSaldos();
     alert('¡Historial de ventas reiniciado con éxito! El corte de caja está nuevamente en $0.00.');
@@ -649,6 +743,8 @@ window.generarReporteCortePDF = function() {
     const ventasTotales = parseFloat(document.getElementById('rep-ventas').innerText) || 0;
     const ganancias = parseFloat(document.getElementById('rep-ganancias').innerText) || 0;
     const proveedores = parseFloat(document.getElementById('rep-proveedores').innerText) || 0;
+
+    registrarBitacora('Generación de PDF', 'Se descargó el Reporte PDF de Corte de Caja.');
 
     generarReportePDF({
         fecha: new Date().toLocaleDateString(),
