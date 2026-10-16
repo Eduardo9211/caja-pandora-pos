@@ -1,5 +1,5 @@
 import { thermalPrinter } from './printerService.js';
-import { generarReportePDF } from './pdfReportService.js';
+import { generarReportePDF, generarEstadoCuentaProveedorPDF, generarCatalogoPDF } from './pdfReportService.js';
 
 let proveedores = JSON.parse(localStorage.getItem('pandora_proveedores')) || [];
 let inventario = JSON.parse(localStorage.getItem('pandora_inventario')) || [];
@@ -134,16 +134,28 @@ function renderProveedoresSaldos() {
                 ${listaArticulosHTML}
                 ${listaVentasHTML}
 
-                <div style="display:flex; gap:8px; margin-top:10px;">
-                    <button class="btn-accent" style="padding: 8px; font-size: 0.8rem; flex:1;" onclick="exportarEstadoCuentaProveedor('${prov.id}')">📲 Enviar Reporte WhatsApp</button>
-                    <button class="btn-primary" style="padding: 8px; font-size: 0.8rem; flex:1;" onclick="liquidarProveedor('${prov.id}')">💵 Liquidar y Pagar</button>
+                <div style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
+                    <button class="btn-accent" style="padding: 8px; font-size: 0.8rem;" onclick="exportarEstadoCuentaProveedorWhatsApp('${prov.id}')">📲 Enviar Reporte WhatsApp</button>
+                    <button class="btn-primary" style="padding: 8px; font-size: 0.8rem;" onclick="exportarEstadoCuentaProveedorPDF('${prov.id}')">📄 Descargar Estado de Cuenta PDF</button>
+                    <button style="background:#10b981; color:white; border:none; padding:8px; border-radius:6px; font-size:0.8rem; font-weight:bold; cursor:pointer;" onclick="liquidarProveedor('${prov.id}')">💵 Liquidar y Pagar</button>
                 </div>
             </div>
         `;
     });
 }
 
-window.exportarEstadoCuentaProveedor = function(provId) {
+window.exportarEstadoCuentaProveedorPDF = function(provId) {
+    const prov = proveedores.find(p => p.id == provId);
+    if (!prov) return;
+
+    const prodProveedor = inventario.filter(p => p.proveedorId == prov.id);
+    const ventasPendientes = ventasRealizadas.filter(v => v.proveedorId == prov.id && !v.liquidado);
+    const deudaPendiente = ventasPendientes.reduce((acc, v) => acc + v.pagoProveedor, 0);
+
+    generarEstadoCuentaProveedorPDF(prov, prodProveedor, ventasPendientes, deudaPendiente);
+};
+
+window.exportarEstadoCuentaProveedorWhatsApp = function(provId) {
     const prov = proveedores.find(p => p.id == provId);
     if (!prov) return;
 
@@ -326,7 +338,6 @@ window.procesarVenta = function() {
     producto.stock -= cantidad;
 
     const subtotalBruto = producto.precio * cantidad;
-
     const comisionTiendaBruta = subtotalBruto * (producto.comisionPorc / 100);
     const pagoProveedor = subtotalBruto - comisionTiendaBruta; 
     const comisionTiendaNeta = comisionTiendaBruta - descuento; 
@@ -357,7 +368,7 @@ window.procesarVenta = function() {
 };
 
 // ==========================================
-// 5. INVENTARIO Y CATÁLOGO WHATSAPP
+// 5. INVENTARIO Y CATÁLOGO
 // ==========================================
 function renderInventario() {
     const contenedor = document.getElementById('lista-inventario');
@@ -403,6 +414,14 @@ window.compartirCatalogoWhatsApp = function() {
 
     const urlWhatsApp = `https://api.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`;
     window.open(urlWhatsApp, '_blank');
+};
+
+window.generarCatalogoPDF = function() {
+    if (inventario.length === 0) {
+        alert('No hay productos en el inventario para generar el catálogo.');
+        return;
+    }
+    generarCatalogoPDF(inventario);
 };
 
 // ==========================================
@@ -479,7 +498,6 @@ function renderHistorialVentas() {
         return;
     }
 
-    // Mostrar las ventas en orden inverso (más recientes primero)
     [...ventasRealizadas].reverse().forEach(v => {
         const estadoLiquidado = v.liquidado ? '<span style="color:#38bdf8;">[Ya Liquidado]</span>' : '<span style="color:#f87171;">[Pendiente de Pago]</span>';
         contenedor.innerHTML += `
@@ -515,26 +533,21 @@ window.devolverVenta = function(idVenta) {
         return;
     }
 
-    // 1. Devolver stock al producto en inventario (si existe)
     const productoInventario = inventario.find(p => p.nombre.toLowerCase() === venta.producto.toLowerCase() || p.id === venta.proveedorId);
     if (productoInventario) {
         productoInventario.stock += venta.cantidad;
     } else {
-        // Si no lo encuentra por nombre exacto, buscamos por proveedor y nombre parcial o creamos un aviso
         const altProd = inventario.find(p => p.proveedorId == venta.proveedorId);
         if (altProd) {
             altProd.stock += venta.cantidad;
         }
     }
 
-    // 2. Eliminar la venta del arreglo
     ventasRealizadas.splice(index, 1);
 
-    // 3. Guardar cambios
     localStorage.setItem('pandora_ventas', JSON.stringify(ventasRealizadas));
     localStorage.setItem('pandora_inventario', JSON.stringify(inventario));
 
-    // 4. Actualizar pantallas
     cargarReportes();
     actualizarSelects();
     alert('¡Devolución procesada con éxito! Stock restaurado y saldo del proveedor ajustado.');

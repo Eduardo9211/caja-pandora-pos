@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#1e293b">
+    <!-- Librería jsPDF para generación de documentos profesionales -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -89,19 +91,22 @@
         <div id="tab-saldos-prov" class="tab-content">
             <div class="card">
                 <h2>Control y Liquidación de Proveedores</h2>
-                <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">Consulta los saldos pendientes por proveedor y realiza la liquidación para reiniciar cuentas a $0.00.</p>
+                <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">Consulta los saldos y exporta estados de cuenta formales en PDF o WhatsApp.</p>
                 <div id="lista-saldos-proveedores">
                     <!-- Carga dinámica -->
                 </div>
             </div>
         </div>
 
-        <!-- TAB 4: INVENTARIO Y CATÁLOGO WHATSAPP -->
+        <!-- TAB 4: INVENTARIO Y CATÁLOGO PDF -->
         <div id="tab-inventario" class="tab-content">
             <div class="card">
-                <h2>Catálogo Especial para WhatsApp</h2>
-                <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">Comparte los artículos destacados directamente por WhatsApp con texto ligero.</p>
-                <button class="btn-accent" onclick="compartirCatalogoWhatsApp()">📱 Compartir Catálogo Especial por WhatsApp</button>
+                <h2>Catálogo de Productos</h2>
+                <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">Comparte los artículos disponibles mediante texto o genera un Catálogo formal en PDF.</p>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <button class="btn-accent" onclick="compartirCatalogoWhatsApp()">📱 Compartir Catálogo por WhatsApp</button>
+                    <button class="btn-primary" onclick="generarCatalogoPDF()">📄 Descargar Catálogo en PDF</button>
+                </div>
             </div>
 
             <div class="card">
