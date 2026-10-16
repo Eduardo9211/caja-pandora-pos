@@ -7,6 +7,128 @@ let deseos = JSON.parse(localStorage.getItem('pandora_deseos')) || [];
 let ventasRealizadas = JSON.parse(localStorage.getItem('pandora_ventas')) || [];
 
 // ==========================================
+// AUTENTICACIÓN, ROLES Y PERMISOS
+// ==========================================
+let usuarios = JSON.parse(localStorage.getItem('pandora_usuarios')) || [
+    { id: 1, nombre: 'Carlos (Admin)', username: 'admin', password: 'pandora123', rol: 'admin' }
+];
+
+let usuarioActual = JSON.parse(localStorage.getItem('pandora_usuario_activo')) || null;
+
+window.iniciarSesion = function() {
+    const userIn = document.getElementById('login-usuario').value.trim().toLowerCase();
+    const passIn = document.getElementById('login-password').value.trim();
+    const errorEl = document.getElementById('login-error');
+
+    const usuarioEncontrado = usuarios.find(u => u.username.toLowerCase() === userIn && u.password === passIn);
+
+    if (usuarioEncontrado) {
+        usuarioActual = usuarioEncontrado;
+        localStorage.setItem('pandora_usuario_activo', JSON.stringify(usuarioActual));
+        errorEl.style.display = 'none';
+        verificarEstadoSesion();
+    } else {
+        errorEl.innerText = 'Usuario o contraseña incorrectos.';
+        errorEl.style.display = 'block';
+    }
+};
+
+window.cerrarSesion = function() {
+    usuarioActual = null;
+    localStorage.removeItem('pandora_usuario_activo');
+    verificarEstadoSesion();
+};
+
+function verificarEstadoSesion() {
+    const loginScreen = document.getElementById('login-screen');
+    const appContainer = document.getElementById('app-container');
+
+    if (!usuarioActual) {
+        loginScreen.style.display = 'flex';
+        appContainer.style.display = 'none';
+        document.getElementById('login-usuario').value = '';
+        document.getElementById('login-password').value = '';
+    } else {
+        loginScreen.style.display = 'none';
+        appContainer.style.display = 'block';
+        document.getElementById('user-display-name').innerText = `${usuarioActual.nombre} (${usuarioActual.rol.toUpperCase()})`;
+        aplicarPermisosRol();
+    }
+}
+
+function aplicarPermisosRol() {
+    // Si el usuario es cajero, ocultar pestañas sensibles
+    const esAdmin = usuarioActual && usuarioActual.rol === 'admin';
+
+    const selectorOcultar = esAdmin ? [] : ['.nav-tab-proveedores', '.nav-tab-saldos-prov', '.nav-tab-reportes', '.nav-tab-admin'];
+
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.style.display = 'flex');
+
+    if (!esAdmin) {
+        selectorOcultar.forEach(sel => {
+            const el = document.querySelector(sel);
+            if (el) el.style.display = 'none';
+        });
+        // Si estaba en una pestaña prohibida, forzar ir a ventas
+        cambiarTab('ventas', document.querySelector('.nav-tab-ventas'));
+    } else {
+        renderUsuarios();
+    }
+}
+
+window.crearUsuario = function() {
+    const nombre = document.getElementById('newUser-nombre').value.trim();
+    const username = document.getElementById('newUser-username').value.trim().toLowerCase();
+    const password = document.getElementById('newUser-password').value.trim();
+    const rol = document.getElementById('newUser-rol').value;
+
+    if (!nombre || !username || !password) {
+        alert('Completa todos los campos para crear un usuario.');
+        return;
+    }
+
+    if (usuarios.some(u => u.username.toLowerCase() === username)) {
+        alert('Ese nombre de usuario ya está registrado.');
+        return;
+    }
+
+    usuarios.push({ id: Date.now(), nombre, username, password, rol });
+    localStorage.setItem('pandora_usuarios', JSON.stringify(usuarios));
+
+    document.getElementById('newUser-nombre').value = '';
+    document.getElementById('newUser-username').value = '';
+    document.getElementById('newUser-password').value = '';
+    renderUsuarios();
+    alert('¡Usuario creado con éxito!');
+};
+
+function renderUsuarios() {
+    const contenedor = document.getElementById('lista-usuarios');
+    if (!contenedor) return;
+    contenedor.innerHTML = '';
+
+    usuarios.forEach(u => {
+        const esBorrable = u.username !== 'admin';
+        contenedor.innerHTML += `
+            <div style="background:#0f172a; padding:8px 12px; border-radius:6px; margin-bottom:6px; border:1px solid #334155; display:flex; justify-content:space-between; align-items:center; font-size:0.85rem;">
+                <div>
+                    <strong>${u.nombre}</strong> (@${u.username})<br>
+                    <span style="color:#38bdf8;">Rol: ${u.rol.toUpperCase()}</span>
+                </div>
+                ${esBorrable ? `<button style="background:#ef4444; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:0.75rem; cursor:pointer;" onclick="eliminarUsuario(${u.id})">Eliminar</button>` : ''}
+            </div>
+        `;
+    });
+}
+
+window.eliminarUsuario = function(id) {
+    if (!confirm('¿Seguro que deseas eliminar este usuario?')) return;
+    usuarios = usuarios.filter(u => u.id !== id);
+    localStorage.setItem('pandora_usuarios', JSON.stringify(usuarios));
+    renderUsuarios();
+};
+
+// ==========================================
 // CONTROL DE TABS
 // ==========================================
 window.cambiarTab = function(tabName, element) {
@@ -21,6 +143,7 @@ window.cambiarTab = function(tabName, element) {
     if (tabName === 'saldos-prov') renderProveedoresSaldos();
     if (tabName === 'deseos') renderDeseos();
     if (tabName === 'reportes') cargarReportes();
+    if (tabName === 'admin') renderUsuarios();
     if (tabName === 'ventas' || tabName === 'proveedores') actualizarSelects();
 };
 
@@ -218,12 +341,14 @@ window.imprimirEtiquetasSeleccionadas = async function() {
 
 function actualizarSelects() {
     const selectProv = document.getElementById('prod-proveedor');
+    if (!selectProv) return;
     selectProv.innerHTML = '<option value="">-- Seleccionar --</option>';
     proveedores.forEach(p => {
         selectProv.innerHTML += `<option value="${p.id}">${p.nombre}</option>`;
     });
 
     const selectVenta = document.getElementById('venta-producto');
+    if (!selectVenta) return;
     selectVenta.innerHTML = '<option value="">-- Seleccionar del inventario --</option>';
     inventario.forEach(prod => {
         if (prod.stock > 0) {
@@ -308,6 +433,7 @@ window.procesarVenta = function() {
         idVenta: Date.now(),
         folio: Math.floor(1000 + Math.random() * 9000),
         fecha: new Date().toLocaleString(),
+        vendedor: usuarioActual ? usuarioActual.nombre : 'Desconocido',
         producto: producto.nombre,
         proveedorId: producto.proveedorId,
         cantidad,
@@ -334,6 +460,7 @@ window.procesarVenta = function() {
 // ==========================================
 function renderInventario() {
     const contenedor = document.getElementById('lista-inventario');
+    if (!contenedor) return;
     contenedor.innerHTML = '';
 
     if (inventario.length === 0) {
@@ -411,6 +538,7 @@ window.guardarDeseo = function() {
 
 function renderDeseos() {
     const contenedor = document.getElementById('lista-deseos');
+    if (!contenedor) return;
     contenedor.innerHTML = '';
     if (deseos.length === 0) {
         contenedor.innerHTML = '<p style="color:#94a3b8; font-size:0.9rem;">No hay solicitudes pendientes.</p>';
@@ -443,9 +571,14 @@ window.cargarReportes = function() {
         }
     });
 
-    document.getElementById('rep-ventas').innerText = ventasTotales.toFixed(2);
-    document.getElementById('rep-ganancias').innerText = gananciasNetas.toFixed(2);
-    document.getElementById('rep-proveedores').innerText = pagarProveedores.toFixed(2);
+    const repVentas = document.getElementById('rep-ventas');
+    if (repVentas) repVentas.innerText = ventasTotales.toFixed(2);
+
+    const repGanancias = document.getElementById('rep-ganancias');
+    if (repGanancias) repGanancias.innerText = gananciasNetas.toFixed(2);
+
+    const repProv = document.getElementById('rep-proveedores');
+    if (repProv) repProv.innerText = pagarProveedores.toFixed(2);
 
     renderHistorialVentas();
 };
@@ -465,7 +598,7 @@ function renderHistorialVentas() {
         contenedor.innerHTML += `
             <div style="background:#0f172a; padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid #334155; font-size:0.85rem; display:flex; justify-content:space-between; align-items:center;">
                 <div>
-                    <strong>Folio #${v.folio}</strong> - ${v.fecha}<br>
+                    <strong>Folio #${v.folio}</strong> - ${v.fecha} <span style="color:#94a3b8;">(${v.vendedor || 'Admin'})</span><br>
                     📦 ${v.producto} (x${v.cantidad}) ➔ Total: $${v.total.toFixed(2)}<br>
                     ${estadoLiquidado}
                 </div>
@@ -538,11 +671,13 @@ window.generarReporteCortePDF = function() {
 
     generarReportePDF({
         fecha: new Date().toLocaleDateString(),
-        usuario: 'Carlos Lechuga',
+        usuario: usuarioActual ? usuarioActual.nombre : 'Carlos Lechuga',
         ventasTotales,
         ganancias,
         proveedores
     });
 };
 
+// Inicializar sesión al cargar la app
+verificarEstadoSesion();
 actualizarSelects();
