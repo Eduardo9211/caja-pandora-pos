@@ -57,7 +57,6 @@ function verificarEstadoSesion() {
 }
 
 function aplicarPermisosRol() {
-    // Si el usuario es cajero, ocultar pestañas sensibles
     const esAdmin = usuarioActual && usuarioActual.rol === 'admin';
 
     const selectorOcultar = esAdmin ? [] : ['.nav-tab-proveedores', '.nav-tab-saldos-prov', '.nav-tab-reportes', '.nav-tab-admin'];
@@ -69,7 +68,6 @@ function aplicarPermisosRol() {
             const el = document.querySelector(sel);
             if (el) el.style.display = 'none';
         });
-        // Si estaba en una pestaña prohibida, forzar ir a ventas
         cambiarTab('ventas', document.querySelector('.nav-tab-ventas'));
     } else {
         renderUsuarios();
@@ -203,7 +201,7 @@ window.guardarProducto = function() {
 };
 
 // ==========================================
-// 2. GESTIÓN Y DETALLE DE PROVEEDORES (SOLO PDF)
+// 2. GESTIÓN Y DETALLE DE PROVEEDORES
 // ==========================================
 function renderProveedoresSaldos() {
     const contenedor = document.getElementById('lista-saldos-proveedores');
@@ -456,7 +454,7 @@ window.procesarVenta = function() {
 };
 
 // ==========================================
-// 5. INVENTARIO Y CATÁLOGO
+// 5. INVENTARIO Y CATÁLOGO PDF
 // ==========================================
 function renderInventario() {
     const contenedor = document.getElementById('lista-inventario');
@@ -487,23 +485,6 @@ function renderInventario() {
         `;
     });
 }
-
-window.compartirCatalogoWhatsApp = function() {
-    if (inventario.length === 0) {
-        alert('No hay productos para compartir en el catálogo.');
-        return;
-    }
-
-    let mensaje = "🌟 *LA CAJA DE PANDORA - CATÁLOGO ESPECIAL* 🌟\n\n¡Hola! Checa nuestros artículos destacados disponibles:\n\n";
-    inventario.filter(p => p.stock > 0).forEach(p => {
-        const cod = p.codigo ? p.codigo : 'Pendiente';
-        mensaje += `▪️ *${p.nombre}*\n   Precio: $${p.precio.toFixed(2)}\n   Ref: ${cod}\n\n`;
-    });
-    mensaje += "¿Te interesa alguno? Escríbenos para apartarlo. 🛍️";
-
-    const urlWhatsApp = `https://api.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`;
-    window.open(urlWhatsApp, '_blank');
-};
 
 window.generarCatalogoPDF = function() {
     if (inventario.length === 0) {
@@ -678,6 +659,5 @@ window.generarReporteCortePDF = function() {
     });
 };
 
-// Inicializar sesión al cargar la app
 verificarEstadoSesion();
 actualizarSelects();
