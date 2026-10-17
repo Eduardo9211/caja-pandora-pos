@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pandora-store-v12';
+const CACHE_NAME = 'pandora-store-v13';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -6,6 +6,7 @@ const urlsToCache = [
   '/app.js',
   '/printerService.js',
   '/pdfReportService.js',
+  '/jspdf.umd.min.js',
   '/manifest.json'
 ];
 

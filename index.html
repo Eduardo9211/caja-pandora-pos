@@ -7,7 +7,8 @@
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#1e293b">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Carga Local para modo 100% sin conexión -->
+    <script src="/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -218,12 +219,12 @@
 
                 <div class="card" style="margin-top:15px;">
                     <h2>📜 Bitácora de Movimientos y Auditoría</h2>
-                    <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px;">Monitoreo en tiempo real de acciones realizadas por cada usuario (ventas, devoluciones, altas, liquidaciones, etc.).</p>
+                    <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px;">Monitoreo en tiempo real de acciones realizadas por cada usuario.</p>
                     
                     <input type="text" id="buscar-bitacora" placeholder="🔍 Filtrar por usuario o acción..." oninput="renderBitacora()" style="margin-bottom: 10px; font-size: 0.85rem;">
 
                     <div id="lista-bitacora" style="max-height: 250px; overflow-y: auto; padding-right: 5px;">
-                        <!-- Carga dinámica de eventos con fecha y hora -->
+                        <!-- Carga dinámica -->
                     </div>
 
                     <button style="background: #334155; color: #94a3b8; border: none; padding: 8px; border-radius: 6px; font-size: 0.8rem; width: 100%; margin-top: 10px; cursor: pointer;" onclick="limpiarBitacora()">🗑️ Limpiar Bitácora de Movimientos</button>
