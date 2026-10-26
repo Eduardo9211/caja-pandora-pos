@@ -105,7 +105,7 @@
                     <label for="prod-stock">Cantidad / Piezas a ingresar</label>
                     <input type="number" id="prod-stock" value="1" min="1">
 
-                    <!-- OPCIÓN DE TIENDA WEB -->
+                    <!-- CASILLA Y ENLACE PARA LA TIENDA WEB -->
                     <div style="margin: 12px 0; background: #090d16; padding: 10px; border-radius: 6px; border: 1px dashed #d97706;">
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #fbbf24; font-weight: bold;">
                             <input type="checkbox" id="prod-en-web" style="width: 20px; height: 20px;"> Publicar este artículo en la Tienda Web
@@ -131,9 +131,10 @@
             <div id="tab-inventario" class="tab-content">
                 <div class="card">
                     <h2>Catálogo de Productos</h2>
-                    <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">Genera y descarga el catálogo oficial o visita tu Tienda Web.</p>
+                    <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">Genera y descarga el catálogo oficial o abre tu Tienda Web.</p>
                     <div style="display: flex; flex-direction: column; gap: 8px;">
                         <button class="btn-primary" onclick="generarCatalogoPDF()">📄 Descargar Catálogo en PDF</button>
+                        <!-- ENLACE A LA TIENDA WEB PÚBLICA -->
                         <a href="tienda.html" target="_blank" style="background: #d97706; color: white; text-align: center; padding: 12px; border-radius: 8px; font-weight: bold; text-decoration: none;">🌐 Abrir Tienda Web Pública</a>
                     </div>
                 </div>

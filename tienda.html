@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Caja de Pandora - Tienda Online</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body style="background: var(--bg-color); color: var(--text-color); font-family: sans-serif; margin: 0; padding: 0;">
+
+    <!-- HEADER MÍSTICO -->
+    <header style="background: linear-gradient(135deg, #171007, #291a0b); border-bottom: 2px solid #d97706; padding: 20px; text-align: center; position: sticky; top: 0; z-index: 100;">
+        <h1 style="color: #fbbf24; margin: 0; font-size: 1.8rem; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">✨ LA CAJA DE PANDORA ✨</h1>
+        <p style="color: #cbd5e1; font-style: italic; margin: 5px 0 0 0; font-size: 0.95rem;">"Donde siempre hay una sorpresa. ¡Abre el misterio!"</p>
+        
+        <!-- BOTÓN CARRITO -->
+        <div style="margin-top: 15px;">
+            <button onclick="toggleCarrito()" style="background: #d97706; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+                🛒 Carrito (<span id="cart-count">0</span>)
+            </button>
+        </div>
+    </header>
+
+    <!-- CONTENEDOR PRINCIPAL DE PRODUCTOS -->
+    <main style="max-width: 1200px; margin: 20px auto; padding: 0 15px;">
+        <h2 style="color: #fbbf24; border-bottom: 1px solid #475569; padding-bottom: 10px;">📦 Artículos Exclusivos Disponibles</h2>
+        
+        <div id="tienda-productos" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; margin-top: 20px;">
+            <!-- Se carga dinámicamente desde el localStorage del POS -->
+        </div>
+    </main>
+
+    <!-- MODAL / PANEL DE CARRITO Y CHECKOUT AUTOMATIZADO -->
+    <div id="modal-carrito" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: #171007; border: 2px solid #d97706; padding: 20px; border-radius: 12px; width: 100%; max-width: 450px; color: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+            <h2 style="color: #fbbf24; margin-top: 0;">🛍️ Tu Carrito Místico</h2>
+            
+            <div id="cart-items" style="max-height: 180px; overflow-y: auto; margin-bottom: 15px; border-bottom: 1px dashed #475569; padding-bottom: 10px;">
+                <!-- Lista de items en carrito -->
+            </div>
+
+            <div style="font-size: 1.1rem; margin-bottom: 15px; font-weight: bold;">
+                Total Productos: $<span id="cart-subtotal">0.00</span>
+            </div>
+
+            <label style="display:block; font-size:0.85rem; color:#cbd5e1; margin-bottom:5px;">Método de Entrega:</label>
+            <select id="envio-tipo" onchange="actualizarTotalCarrito()" style="width:100%; padding:10px; background:#090d16; color:#fff; border:1px solid #475569; border-radius:6px; margin-bottom:12px;">
+                <option value="recoleccion">🏪 Recolección en Tienda Física (Gratis)</option>
+                <option value="envio">📦 Envío a Domicilio (+$150.00)</option>
+            </select>
+
+            <div style="font-size: 1.2rem; margin-bottom: 15px; font-weight: bold; color: #4ade80;">
+                Total a Pagar: $<span id="cart-total">0.00</span>
+            </div>
+
+            <label style="display:block; font-size:0.85rem; color:#cbd5e1;">Tu Nombre:</label>
+            <input type="text" id="cliente-nombre" placeholder="Ej: Juan Pérez" style="width:100%; padding:10px; background:#090d16; color:#fff; border:1px solid #475569; border-radius:6px; margin-bottom:10px;">
+
+            <label style="display:block; font-size:0.85rem; color:#cbd5e1;">Dirección de Envío (Si aplica):</label>
+            <textarea id="cliente-direccion" placeholder="Calle, número, colonia, ciudad..." style="width:100%; padding:8px; background:#090d16; color:#fff; border:1px solid #475569; border-radius:6px; margin-bottom:15px; height:60px;"></textarea>
+
+            <div style="display: flex; gap: 10px;">
+                <button onclick="finalizarPedidoWhatsApp()" style="flex: 2; background: #25d366; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer;">📲 Enviar Pedido por WhatsApp</button>
+                <button onclick="toggleCarrito()" style="flex: 1; background: #64748b; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer;">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT DE LA TIENDA WEB -->
+    <script>
+        let inventarioWeb = JSON.parse(localStorage.getItem('pandora_inventario')) || [];
+        let carrito = [];
+
+        function renderTienda() {
+            const contenedor = document.getElementById('tienda-productos');
+            contenedor.innerHTML = '';
+            
+            // Filtra solo los productos que tienen la casilla 'enWeb' activada y stock disponible
+            const disponibles = inventarioWeb.filter(p => p.enWeb && p.stock > 0);
+
+            if (disponibles.length === 0) {
+                contenedor.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #94a3b8; padding: 40px;">No hay artículos publicados en la web en este momento. ¡Vuelve pronto!</p>';
+                return;
+            }
+
+            disponibles.forEach(prod => {
+                contenedor.innerHTML += `
+                    <div style="background: #171007; border: 1px solid #d97706; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.4); display: flex; flex-direction: column;">
+                        <img src="${prod.imagen}" alt="${prod.nombre}" style="width: 100%; height: 200px; object-fit: cover; border-bottom: 1px solid #d97706;">
+                        <div style="padding: 15px; display: flex; flex-direction: column; flex-grow: 1;">
+                            <h3 style="margin: 0 0 10px 0; color: #fbbf24; font-size: 1.1rem;">${prod.nombre}</h3>
+                            <div style="font-size: 1.25rem; color: #4ade80; font-weight: bold; margin-bottom: 15px;">$${prod.precio.toFixed(2)}</div>
+                            <button onclick="agregarAlCarrito(${prod.id})" style="margin-top: auto; background: #d97706; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer;">🛒 Agregar al Carrito</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function agregarAlCarrito(id) {
+            const prod = inventarioWeb.find(p => p.id === id);
+            if (!prod) return;
+            const enCarrito = carrito.find(item => item.id === id);
+            if (enCarrito) {
+                if (enCarrito.cantidad < prod.stock) {
+                    enCarrito.cantidad++;
+                } else {
+                    alert('Has alcanzado el límite de stock disponible para este artículo.');
+                    return;
+                }
+            } else {
+                carrito.push({ ...prod, cantidad: 1 });
+            }
+            actualizarContadorCarrito();
+            alert(`¡"${prod.nombre}" agregado al carrito!`);
+        }
+
+        function actualizarContadorCarrito() {
+            const totalItems = carrito.reduce((sum, item) => sum + item.cantidad, 0);
+            document.getElementById('cart-count').innerText = totalItems;
+        }
+
+        function toggleCarrito() {
+            const modal = document.getElementById('modal-carrito');
+            if (modal.style.display === 'flex') {
+                modal.style.display = 'none';
+            } else {
+                renderCarritoItems();
+                modal.style.display = 'flex';
+            }
+        }
+
+        function renderCarritoItems() {
+            const contenedor = document.getElementById('cart-items');
+            contenedor.innerHTML = '';
+            if (carrito.length === 0) {
+                contenedor.innerHTML = '<p style="color:#94a3b8; font-size:0.9rem;">Tu carrito está vacío.</p>';
+                actualizarTotalCarrito();
+                return;
+            }
+            carrito.forEach((item, index) => {
+                contenedor.innerHTML += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.85rem;">
+                        <span>${item.nombre} (x${item.cantidad})</span>
+                        <span>$${(item.precio * item.cantidad).toFixed(2)} <button onclick="removerItem(${index})" style="background:none; border:none; color:#f87171; cursor:pointer; font-weight:bold;">❌</button></span>
+                    </div>
+                `;
+            });
+            actualizarTotalCarrito();
+        }
+
+        function removerItem(index) {
+            carrito.splice(index, 1);
+            actualizarContadorCarrito();
+            renderCarritoItems();
+        }
+
+        function actualizarTotalCarrito() {
+            const subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+            const tipoEnvio = document.getElementById('envio-tipo').value;
+            const costoEnvio = tipoEnvio === 'envio' ? 150.00 : 0.00;
+            const total = subtotal + costoEnvio;
+
+            document.getElementById('cart-subtotal').innerText = subtotal.toFixed(2);
+            document.getElementById('cart-total').innerText = total.toFixed(2);
+        }
+
+        function finalizarPedidoWhatsApp() {
+            if (carrito.length === 0) { alert('Tu carrito está vacío.'); return; }
+            const nombre = document.getElementById('cliente-nombre').value.trim();
+            const direccion = document.getElementById('cliente-direccion').value.trim();
+            const tipoEnvio = document.getElementById('envio-tipo').value;
+
+            if (!nombre) { alert('Por favor ingresa tu nombre.'); return; }
+            if (tipoEnvio === 'envio' && !direccion) { alert('Por favor ingresa tu dirección de envío.'); return; }
+
+            const subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+            const costoEnvio = tipoEnvio === 'envio' ? 150.00 : 0.00;
+            const total = subtotal + costoEnvio;
+
+            let mensaje = `🌟 *NUEVO PEDIDO WEB - LA CAJA DE PANDORA* 🌟\n\n`;
+            mensaje += `👤 *Cliente:* ${nombre}\n`;
+            mensaje += `🚚 *Método:* ${tipoEnvio === 'envio' ? 'Envío a Domicilio (+$150)' : 'Recolección en Tienda'}\n`;
+            if (tipoEnvio === 'envio') mensaje += `📍 *Dirección:* ${direccion}\n\n`;
+            mensaje += `🛍️ *Artículos:* \n`;
+
+            carrito.forEach(item => {
+                mensaje += ` - ${item.nombre} (x${item.cantidad}) : $${(item.precio * item.cantidad).toFixed(2)}\n`;
+            });
+
+            mensaje += `\n💰 *Total a Pagar:* $${total.toFixed(2)}\n\n`;
+            mensaje += `¡Hola! Me gustaría confirmar mi pedido y coordinar el pago/envío. ✨`;
+
+            const telefonoTienda = "527712726259"; 
+            const url = `https://api.whatsapp.com/send?phone=${telefonoTienda}&text=${encodeURIComponent(mensaje)}`;
+            
+            window.open(url, '_blank');
+        }
+
+        renderTienda();
+    </script>
+</body>
+</html>
