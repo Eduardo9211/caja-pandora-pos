@@ -7,15 +7,14 @@
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#1e293b">
-    <!-- Carga Local para modo 100% sin conexión -->
     <script src="/jspdf.umd.min.js"></script>
 </head>
 <body>
 
     <!-- SCREEN 0: PANTALLA DE LOGIN -->
-    <div id="login-screen" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; background: #0f172a; color: white;">
+    <div id="login-screen" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; background: #090d16; color: white;">
         <div class="card" style="width: 100%; max-width: 360px; text-align: center;">
-            <h1 style="font-size: 1.5rem; margin-bottom: 5px;">La Caja de Pandora</h1>
+            <h1 style="font-size: 1.5rem; margin-bottom: 5px; color: #fbbf24;">La Caja de Pandora</h1>
             <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 20px;">Acceso al Sistema POS</p>
 
             <label for="login-usuario" style="text-align: left; display: block;">Usuario</label>
@@ -34,7 +33,7 @@
 
         <header style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px;">
             <h1 style="font-size: 1.1rem; margin: 0;">La Caja de Pandora</h1>
-            <div style="font-size: 0.8rem; color: #38bdf8;">
+            <div style="font-size: 0.8rem; color: #fbbf24;">
                 👤 <span id="user-display-name">Admin</span>
             </div>
         </header>
@@ -106,6 +105,15 @@
                     <label for="prod-stock">Cantidad / Piezas a ingresar</label>
                     <input type="number" id="prod-stock" value="1" min="1">
 
+                    <!-- OPCIÓN DE TIENDA WEB -->
+                    <div style="margin: 12px 0; background: #090d16; padding: 10px; border-radius: 6px; border: 1px dashed #d97706;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #fbbf24; font-weight: bold;">
+                            <input type="checkbox" id="prod-en-web" style="width: 20px; height: 20px;"> Publicar este artículo en la Tienda Web
+                        </label>
+                        <label for="prod-imagen" style="display:block; margin-top:8px; font-size:0.85rem;">Enlace de la Imagen (URL):</label>
+                        <input type="text" id="prod-imagen" placeholder="https://ejemplo.com/foto.jpg" style="margin-top:4px;">
+                    </div>
+
                     <button class="btn-accent" onclick="guardarProducto()">Cargar al Inventario</button>
                 </div>
             </div>
@@ -115,9 +123,7 @@
                 <div class="card">
                     <h2>Control y Liquidación de Proveedores</h2>
                     <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">Consulta los saldos y exporta estados de cuenta formales en PDF.</p>
-                    <div id="lista-saldos-proveedores">
-                        <!-- Carga dinámica -->
-                    </div>
+                    <div id="lista-saldos-proveedores"></div>
                 </div>
             </div>
 
@@ -125,18 +131,18 @@
             <div id="tab-inventario" class="tab-content">
                 <div class="card">
                     <h2>Catálogo de Productos</h2>
-                    <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">Genera y descarga el catálogo oficial de artículos disponibles en formato PDF.</p>
-                    <button class="btn-primary" onclick="generarCatalogoPDF()">📄 Descargar Catálogo en PDF</button>
+                    <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">Genera y descarga el catálogo oficial o visita tu Tienda Web.</p>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <button class="btn-primary" onclick="generarCatalogoPDF()">📄 Descargar Catálogo en PDF</button>
+                        <a href="tienda.html" target="_blank" style="background: #d97706; color: white; text-align: center; padding: 12px; border-radius: 8px; font-weight: bold; text-decoration: none;">🌐 Abrir Tienda Web Pública</a>
+                    </div>
                 </div>
 
                 <div class="card">
                     <h2>Inventario y Generación de Códigos / Etiquetas</h2>
-                    <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">Selecciona los productos ya autorizados para generar su código y mandarlos a imprimir en la Y50P.</p>
+                    <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">Selecciona los productos para generar su código e imprimirlos en la Y50P.</p>
                     <button class="btn-primary" onclick="imprimirEtiquetasSeleccionadas()" style="margin-bottom: 15px;">🖨️ Generar Código e Imprimir Seleccionados (Y50P)</button>
-                    
-                    <div id="lista-inventario">
-                        <!-- Carga dinámica con checkboxes -->
-                    </div>
+                    <div id="lista-inventario"></div>
                 </div>
             </div>
 
@@ -152,9 +158,7 @@
 
                 <div class="card">
                     <h2>Solicitudes Pendientes</h2>
-                    <div id="lista-deseos">
-                        <!-- Carga dinámica -->
-                    </div>
+                    <div id="lista-deseos"></div>
                 </div>
             </div>
 
@@ -181,10 +185,7 @@
 
                 <div class="card" style="margin-top: 15px;">
                     <h2>Historial de Ventas (Devoluciones)</h2>
-                    <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">Si un cliente regresa un producto, puedes cancelar la venta aquí para reingresar el stock y descontar el saldo al proveedor.</p>
-                    <div id="lista-historial-ventas">
-                        <!-- Carga dinámica de ventas recientes -->
-                    </div>
+                    <div id="lista-historial-ventas"></div>
                 </div>
             </div>
 
@@ -212,22 +213,14 @@
 
                 <div class="card" style="margin-top:15px;">
                     <h2>Usuarios Registrados</h2>
-                    <div id="lista-usuarios">
-                        <!-- Carga dinámica -->
-                    </div>
+                    <div id="lista-usuarios"></div>
                 </div>
 
                 <div class="card" style="margin-top:15px;">
                     <h2>📜 Bitácora de Movimientos y Auditoría</h2>
-                    <p style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px;">Monitoreo en tiempo real de acciones realizadas por cada usuario.</p>
-                    
                     <input type="text" id="buscar-bitacora" placeholder="🔍 Filtrar por usuario o acción..." oninput="renderBitacora()" style="margin-bottom: 10px; font-size: 0.85rem;">
-
-                    <div id="lista-bitacora" style="max-height: 250px; overflow-y: auto; padding-right: 5px;">
-                        <!-- Carga dinámica -->
-                    </div>
-
-                    <button style="background: #334155; color: #94a3b8; border: none; padding: 8px; border-radius: 6px; font-size: 0.8rem; width: 100%; margin-top: 10px; cursor: pointer;" onclick="limpiarBitacora()">🗑️ Limpiar Bitácora de Movimientos</button>
+                    <div id="lista-bitacora" style="max-height: 250px; overflow-y: auto; padding-right: 5px;"></div>
+                    <button style="background: #334155; color: #94a3b8; border: none; padding: 8px; border-radius: 6px; font-size: 0.8rem; width: 100%; margin-top: 10px; cursor: pointer;" onclick="limpiarBitacora()">🗑️ Limpiar Bitácora</button>
                 </div>
 
                 <button style="background: #ef4444; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; width: 100%; margin-top: 15px; cursor: pointer;" onclick="cerrarSesion()">🔒 Cerrar Sesión</button>
@@ -237,34 +230,13 @@
 
         <!-- NAVEGACIÓN INFERIOR DINÁMICA -->
         <nav style="display: flex; justify-content: space-around; overflow-x: auto;">
-            <button class="nav-btn active nav-tab-ventas" onclick="cambiarTab('ventas', this)">
-                <span>🛒</span>
-                <span>Ventas</span>
-            </button>
-            <button class="nav-btn nav-tab-proveedores" onclick="cambiarTab('proveedores', this)">
-                <span>🤝</span>
-                <span>Consigna</span>
-            </button>
-            <button class="nav-btn nav-tab-saldos-prov" onclick="cambiarTab('saldos-prov', this)">
-                <span>👥</span>
-                <span>Prov.</span>
-            </button>
-            <button class="nav-btn nav-tab-inventario" onclick="cambiarTab('inventario', this)">
-                <span>📦</span>
-                <span>Stock</span>
-            </button>
-            <button class="nav-btn nav-tab-deseos" onclick="cambiarTab('deseos', this)">
-                <span>⭐</span>
-                <span>Deseos</span>
-            </button>
-            <button class="nav-btn nav-tab-reportes" onclick="cambiarTab('reportes', this)">
-                <span>📊</span>
-                <span>Corte</span>
-            </button>
-            <button class="nav-btn nav-tab-admin" onclick="cambiarTab('admin', this)">
-                <span>⚙️</span>
-                <span>Admin</span>
-            </button>
+            <button class="nav-btn active nav-tab-ventas" onclick="cambiarTab('ventas', this)"><span>🛒</span><span>Ventas</span></button>
+            <button class="nav-btn nav-tab-proveedores" onclick="cambiarTab('proveedores', this)"><span>🤝</span><span>Consigna</span></button>
+            <button class="nav-btn nav-tab-saldos-prov" onclick="cambiarTab('saldos-prov', this)"><span>👥</span><span>Prov.</span></button>
+            <button class="nav-btn nav-tab-inventario" onclick="cambiarTab('inventario', this)"><span>📦</span><span>Stock</span></button>
+            <button class="nav-btn nav-tab-deseos" onclick="cambiarTab('deseos', this)"><span>⭐</span><span>Deseos</span></button>
+            <button class="nav-btn nav-tab-reportes" onclick="cambiarTab('reportes', this)"><span>📊</span><span>Corte</span></button>
+            <button class="nav-btn nav-tab-admin" onclick="cambiarTab('admin', this)"><span>⚙️</span><span>Admin</span></button>
         </nav>
 
     </div>
@@ -273,9 +245,7 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then((reg) => console.log('Service Worker registrado con éxito', reg))
-            .catch((err) => console.log('Error al registrar Service Worker', err));
+          navigator.serviceWorker.register('/sw.js');
         });
       }
     </script>

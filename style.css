@@ -1,14 +1,14 @@
 :root {
-    --bg-color: #0f172a;
-    --card-bg: #1e293b;
+    --bg-color: #090d16;
+    --card-bg: #171007;
     --text-color: #f8fafc;
     --text-muted: #94a3b8;
-    --accent: #3b82f6;
-    --accent-hover: #2563eb;
+    --accent: #d97706; /* Dorado Caoba / Ámbar principal */
+    --accent-hover: #b45309;
     --btn-accent: #10b981;
     --btn-accent-hover: #059669;
     --danger: #ef4444;
-    --border: #334155;
+    --border: #475569;
 }
 
 * {
@@ -25,10 +25,10 @@ body {
 }
 
 header {
-    background-color: var(--card-bg);
+    background: linear-gradient(135deg, #171007, #291a0b);
     padding: 15px;
     text-align: center;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 2px solid var(--accent);
     position: sticky;
     top: 0;
     z-index: 100;
@@ -36,7 +36,8 @@ header {
 
 header h1 {
     font-size: 1.2rem;
-    color: var(--text-color);
+    color: #fbbf24;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
 }
 
 .content {
@@ -59,12 +60,13 @@ header h1 {
     padding: 15px;
     margin-bottom: 15px;
     border: 1px solid var(--border);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
 }
 
 .card h2 {
     font-size: 1.1rem;
     margin-bottom: 12px;
-    color: var(--text-color);
+    color: #fbbf24;
     border-bottom: 1px solid var(--border);
     padding-bottom: 8px;
 }
@@ -77,7 +79,7 @@ label {
     margin-top: 10px;
 }
 
-input, select {
+input, select, textarea {
     width: 100%;
     padding: 10px;
     background-color: #0f172a;
@@ -88,7 +90,7 @@ input, select {
     margin-bottom: 5px;
 }
 
-input:focus, select:focus {
+input:focus, select:focus, textarea:focus {
     outline: none;
     border-color: var(--accent);
 }
@@ -141,7 +143,7 @@ nav {
     background-color: var(--card-bg);
     display: flex;
     justify-content: space-around;
-    border-top: 1px solid var(--border);
+    border-top: 2px solid var(--accent);
     padding: 8px 0;
     z-index: 1000;
 }
@@ -166,5 +168,5 @@ nav {
 }
 
 .nav-btn.active {
-    color: var(--accent);
+    color: #fbbf24;
 }
