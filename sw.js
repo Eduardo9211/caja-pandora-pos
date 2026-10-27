@@ -1,7 +1,8 @@
-const CACHE_NAME = 'pandora-store-v14';
+const CACHE_NAME = 'pandora-store-v15';
 const urlsToCache = [
   '/',
   '/index.html',
+  '/tienda.html',
   '/style.css',
   '/app.js',
   '/printerService.js',
@@ -33,15 +34,13 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// ESTRATEGIA CORREGIDA: CACHE FIRST (Cero datos / 100% Offline)
+// ESTRATEGIA: CACHE FIRST
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      // 1. Si el archivo está en la memoria del teléfono, lo entrega DE INMEDIATO
       if (cachedResponse) {
         return cachedResponse;
       }
-      // 2. Si es algo nuevo que no está en la caché, va a buscarlo a Render
       return fetch(event.request).then((networkResponse) => {
         return caches.open(CACHE_NAME).then((cache) => {
           cache.put(event.request, networkResponse.clone());
