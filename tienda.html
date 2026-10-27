@@ -68,7 +68,8 @@
 
     <!-- SCRIPT DE LA TIENDA WEB -->
     <script>
-        let inventarioWeb = JSON.parse(localStorage.getItem('pandora_inventario')) || [];
+        // Sincronizado con la misma llave del POS ('caja_pandora_inventario')
+        let inventarioWeb = JSON.parse(localStorage.getItem('caja_pandora_inventario')) || [];
         let carrito = [];
 
         function renderTienda() {
