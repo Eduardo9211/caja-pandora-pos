@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pandora-store-v16';
+const CACHE_NAME = 'pandora-store-v17';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -13,12 +13,10 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      // Usamos un ciclo seguro para que si algún archivo opcional no existe, 
-      // la instalación no se rompa por completo.
       return Promise.all(
         urlsToCache.map((url) => {
           return cache.add(url).catch((error) => {
-            console.warn('Aviso: No se pudo cachear el recurso:', url, error);
+            console.warn('Aviso: No se pudo cachear:', url, error);
           });
         })
       );
@@ -40,18 +38,26 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// ESTRATEGIA: NETWORK FIRST CON FALLBACK A CACHÉ PARA EVITAR BLOQUEOS
+// ESTRATEGIA ESTRICTA: CACHE FIRST (Primero busca en el celular, ideal para offline)
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    fetch(event.request)
-      .then((networkResponse) => {
+    caches.match(event.request).then((cachedResponse) => {
+      // Si ya está guardado en el celular, lo abre al instante sin despertar el servidor
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      // Si es un archivo nuevo, lo pide a la red y lo guarda
+      return fetch(event.request).then((networkResponse) => {
         return caches.open(CACHE_NAME).then((cache) => {
           cache.put(event.request, networkResponse.clone());
           return networkResponse;
         });
-      })
-      .catch(() => {
-        return caches.match(event.request);
-      })
+      }).catch(() => {
+        // Fallback por si acaso no hay red ni caché
+        if (event.request.mode === 'navigate') {
+          return caches.match('/index.html');
+        }
+      });
+    })
   );
 });
