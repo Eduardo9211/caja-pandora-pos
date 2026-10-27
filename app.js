@@ -29,19 +29,34 @@ function iniciarSesion() {
     const pass = document.getElementById('login-password').value.trim();
     const errorEl = document.getElementById('login-error');
 
-    const encontrado = usuarios.find(u => u.user === usr && u.pass === pass);
-    if (encontrado) {
-        usuarioActual = encontrado;
-        localStorage.setItem('caja_pandora_sesion', JSON.stringify(usuarioActual));
-        registrarBitacora(`Inició sesión: ${usuarioActual.nombre}`);
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('app-container').style.display = 'block';
-        document.getElementById('user-display-name').innerText = usuarioActual.nombre;
-        inicializarSistema();
+    // LLAVE MAESTRA DE RESPALDO: Garantiza el acceso con admin / 1234 sin borrar tus datos
+    if (usr === 'admin' && pass === '1234') {
+        usuarioActual = { nombre: 'Admin', user: 'admin', pass: '1234', rol: 'admin' };
+        // Si no existe en la lista guardada, lo agregamos para que no haya conflictos
+        let existeAdmin = usuarios.find(u => u.user === 'admin');
+        if (!existeAdmin) {
+            usuarios.push(usuarioActual);
+            localStorage.setItem('caja_pandora_usuarios', JSON.stringify(usuarios));
+        } else {
+            usuarioActual = existeAdmin; // Usa el registrado
+        }
     } else {
-        errorEl.style.display = 'block';
-        errorEl.innerText = 'Usuario o contraseña incorrectos';
+        const encontrado = usuarios.find(u => u.user === usr && u.pass === pass);
+        if (encontrado) {
+            usuarioActual = encontrado;
+        } else {
+            errorEl.style.display = 'block';
+            errorEl.innerText = 'Usuario o contraseña incorrectos';
+            return;
+        }
     }
+
+    localStorage.setItem('caja_pandora_sesion', JSON.stringify(usuarioActual));
+    registrarBitacora(`Inició sesión: ${usuarioActual.nombre}`);
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app-container').style.display = 'block';
+    document.getElementById('user-display-name').innerText = usuarioActual.nombre;
+    inicializarSistema();
 }
 
 function cerrarSesion() {
