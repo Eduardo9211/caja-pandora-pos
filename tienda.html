@@ -39,15 +39,21 @@
                 <!-- Lista de items en carrito -->
             </div>
 
-            <div style="font-size: 1.1rem; margin-bottom: 15px; font-weight: bold;">
-                Total Productos: $<span id="cart-subtotal">0.00</span>
+            <div style="font-size: 1rem; margin-bottom: 8px;">
+                Subtotal Productos: $<span id="cart-subtotal">0.00</span>
             </div>
 
             <label style="display:block; font-size:0.85rem; color:#cbd5e1; margin-bottom:5px;">Método de Entrega:</label>
-            <select id="envio-tipo" onchange="actualizarTotalCarrito()" style="width:100%; padding:10px; background:#090d16; color:#fff; border:1px solid #475569; border-radius:6px; margin-bottom:12px;">
+            <select id="envio-tipo" onchange="actualizarTotalCarrito()" style="width:100%; padding:10px; background:#090d16; color:#fff; border:1px solid #475569; border-radius:6px; margin-bottom:10px;">
                 <option value="recoleccion">🏪 Recolección en Tienda Física (Gratis)</option>
-                <option value="envio">📦 Envío a Domicilio (+$150.00)</option>
+                <option value="envio">📦 Envío a Domicilio (Calculado por Peso/Volumen)</option>
             </select>
+
+            <!-- INFO DE ENVÍO CALCULADO -->
+            <div id="detalle-envio-box" style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 12px; display: none; background: #090d16; padding: 8px; border-radius: 6px;">
+                Peso cobrable: <span id="envio-peso-cobrado">0</span> kg (<span id="envio-tipo-calculo">Real</span>)<br>
+                Costo de Envío: $<span id="cart-envio-costo">0.00</span>
+            </div>
 
             <div style="font-size: 1.2rem; margin-bottom: 15px; font-weight: bold; color: #4ade80;">
                 Total a Pagar: $<span id="cart-total">0.00</span>
@@ -68,7 +74,6 @@
 
     <!-- SCRIPT DE LA TIENDA WEB -->
     <script>
-        // Sincronizado con la misma llave del POS ('caja_pandora_inventario')
         let inventarioWeb = JSON.parse(localStorage.getItem('caja_pandora_inventario')) || [];
         let carrito = [];
 
@@ -76,7 +81,6 @@
             const contenedor = document.getElementById('tienda-productos');
             contenedor.innerHTML = '';
             
-            // Filtra solo los productos que tienen la casilla 'enWeb' activada y stock disponible
             const disponibles = inventarioWeb.filter(p => p.enWeb && p.stock > 0);
 
             if (disponibles.length === 0) {
@@ -156,13 +160,59 @@
             renderCarritoItems();
         }
 
+        function calcularCostoEnvio() {
+            const tipoEnvio = document.getElementById('envio-tipo').value;
+            if (tipoEnvio === 'recoleccion') return 0;
+
+            let pesoTotalReal = 0;
+            let pesoTotalVolumetrico = 0;
+
+            carrito.forEach(item => {
+                const cantidad = item.cantidad;
+                const pesoRealItem = (item.peso || 1) * cantidad;
+                const largo = item.largo || 20;
+                const ancho = item.ancho || 20;
+                const alto = item.alto || 20;
+
+                // Fórmula volumétrica estándar: (Largo x Ancho x Alto / 5000) por cada pieza
+                const volumenItemCm3 = largo * ancho * alto * cantidad;
+                const pesoVolumetricoItem = volumenItemCm3 / 5000;
+
+                pesoTotalReal += pesoRealItem;
+                pesoTotalVolumetrico += pesoVolumetricoItem;
+            });
+
+            // El peso cobrable es el mayor entre el peso real y el peso volumétrico
+            const pesoCobrable = Math.max(pesoTotalReal, pesoTotalVolumetrico);
+            const tipoCalculo = pesoTotalVolumetrico > pesoTotalReal ? 'Volumétrico' : 'Real';
+
+            document.getElementById('envio-peso-cobrado').innerText = pesoCobrable.toFixed(1);
+            document.getElementById('envio-tipo-calculo').innerText = tipoCalculo;
+
+            // Tarifa basada en tu ejemplo ($575 por 26kg volumétricos -> apróx $20 por kg + $50 de base)
+            let costoEnvio = (pesoCobrable * 20) + 50;
+            if (costoEnvio < 150) costoEnvio = 150; // Envío mínimo base
+
+            return costoEnvio;
+        }
+
         function actualizarTotalCarrito() {
             const subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
             const tipoEnvio = document.getElementById('envio-tipo').value;
-            const costoEnvio = tipoEnvio === 'envio' ? 150.00 : 0.00;
+            const detalleBox = document.getElementById('detalle-envio-box');
+
+            let costoEnvio = 0;
+            if (tipoEnvio === 'envio') {
+                costoEnvio = calcularCostoEnvio();
+                detalleBox.style.display = 'block';
+            } else {
+                detalleBox.style.display = 'none';
+            }
+
             const total = subtotal + costoEnvio;
 
             document.getElementById('cart-subtotal').innerText = subtotal.toFixed(2);
+            document.getElementById('cart-envio-costo').innerText = costoEnvio.toFixed(2);
             document.getElementById('cart-total').innerText = total.toFixed(2);
         }
 
@@ -176,12 +226,12 @@
             if (tipoEnvio === 'envio' && !direccion) { alert('Por favor ingresa tu dirección de envío.'); return; }
 
             const subtotal = carrito.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
-            const costoEnvio = tipoEnvio === 'envio' ? 150.00 : 0.00;
+            const costoEnvio = tipoEnvio === 'envio' ? calcularCostoEnvio() : 0;
             const total = subtotal + costoEnvio;
 
             let mensaje = `🌟 *NUEVO PEDIDO WEB - LA CAJA DE PANDORA* 🌟\n\n`;
             mensaje += `👤 *Cliente:* ${nombre}\n`;
-            mensaje += `🚚 *Método:* ${tipoEnvio === 'envio' ? 'Envío a Domicilio (+$150)' : 'Recolección en Tienda'}\n`;
+            mensaje += `🚚 *Método:* ${tipoEnvio === 'envio' ? `Envío a Domicilio ($${costoEnvio.toFixed(2)})` : 'Recolección en Tienda'}\n`;
             if (tipoEnvio === 'envio') mensaje += `📍 *Dirección:* ${direccion}\n\n`;
             mensaje += `🛍️ *Artículos:* \n`;
 
@@ -192,7 +242,7 @@
             mensaje += `\n💰 *Total a Pagar:* $${total.toFixed(2)}\n\n`;
             mensaje += `¡Hola! Me gustaría confirmar mi pedido y coordinar el pago/envío. ✨`;
 
-            const telefonoTienda = "527712726259"; 
+            const telefonoTienda = "525564714311"; 
             const url = `https://api.whatsapp.com/send?phone=${telefonoTienda}&text=${encodeURIComponent(mensaje)}`;
             
             window.open(url, '_blank');

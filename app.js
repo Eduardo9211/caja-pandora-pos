@@ -1,5 +1,5 @@
 // ==========================================
-// APLICACIÓN POS - LA CAJA DE PANDORA (MÓDULO BLINDADO)
+// APLICACIÓN POS - LA CAJA DE PANDORA
 // ==========================================
 
 let inventario = JSON.parse(localStorage.getItem('caja_pandora_inventario')) || [];
@@ -101,7 +101,7 @@ window.guardarProveedor = function() {
     alert('¡Proveedor guardado con éxito!');
 };
 
-// GESTIÓN DE PRODUCTOS
+// GESTIÓN DE PRODUCTOS CON MEDIDAS Y PESO
 window.guardarProducto = function() {
     const proveedorId = document.getElementById('prod-proveedor').value;
     const nombre = document.getElementById('prod-nombre').value.trim();
@@ -111,6 +111,10 @@ window.guardarProducto = function() {
     
     const enWeb = document.getElementById('prod-en-web').checked;
     const imagen = document.getElementById('prod-imagen').value.trim();
+    const peso = parseFloat(document.getElementById('prod-peso').value) || 1;
+    const largo = parseFloat(document.getElementById('prod-largo').value) || 20;
+    const ancho = parseFloat(document.getElementById('prod-ancho').value) || 20;
+    const alto = parseFloat(document.getElementById('prod-alto').value) || 20;
 
     if (!proveedorId || !nombre || precio <= 0) {
         alert('Completa los campos obligatorios del producto.');
@@ -129,7 +133,11 @@ window.guardarProducto = function() {
         comision,
         stock,
         enWeb,
-        imagen: imagen || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&q=80&w=400'
+        imagen: imagen || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&q=80&w=400',
+        peso,
+        largo,
+        ancho,
+        alto
     };
 
     inventario.push(nuevoProducto);
@@ -141,6 +149,10 @@ window.guardarProducto = function() {
     document.getElementById('prod-stock').value = '1';
     document.getElementById('prod-en-web').checked = false;
     document.getElementById('prod-imagen').value = '';
+    document.getElementById('prod-peso').value = '1';
+    document.getElementById('prod-largo').value = '20';
+    document.getElementById('prod-ancho').value = '20';
+    document.getElementById('prod-alto').value = '20';
 
     renderInventario();
     actualizarSelects();
@@ -181,7 +193,8 @@ function renderInventario() {
                 <div>
                     <strong style="color: #f8fafc; font-size: 0.9rem;">${p.nombre}</strong><br>
                     <span style="font-size: 0.75rem; color: #94a3b8;">Código: ${p.codigo} | Stock: ${p.stock} | Precio: $${p.precio}</span><br>
-                    <span style="font-size: 0.75rem; color: ${p.enWeb ? '#4ade80' : '#f87171'};">🌐 En Tienda Web: ${p.enWeb ? 'Sí (Publicado)' : 'No'}</span>
+                    <span style="font-size: 0.75rem; color: #94a3b8;">📦 ${p.peso || 1}kg | Medidas: ${p.largo || 20}x${p.ancho || 20}x${p.alto || 20} cm</span><br>
+                    <span style="font-size: 0.75rem; color: ${p.enWeb ? '#4ade80' : '#f87171'};">🌐 En Tienda Web: ${p.enWeb ? 'Sí' : 'No'}</span>
                 </div>
                 <button onclick="window.eliminarProducto(${p.id})" style="background: #ef4444; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">🗑️</button>
             </div>
@@ -199,6 +212,55 @@ window.eliminarProducto = function(id) {
         renderInventario();
         actualizarSelects();
     }
+};
+
+// RESPALDO Y RESTAURACIÓN JSON
+window.descargarRespaldoJSON = function() {
+    const respaldo = {
+        inventario,
+        proveedores,
+        ventas,
+        deseos,
+        usuarios,
+        bitacora,
+        fechaRespaldo: new Date().toLocaleString()
+    };
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(respaldo, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `respaldo_caja_pandora_${new Date().toISOString().slice(0,10)}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    registrarBitacora('Descargó respaldo de datos en JSON');
+    alert('¡Respaldo descargado con éxito!');
+};
+
+window.restaurarRespaldoJSON = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const contenido = JSON.parse(e.target.result);
+            if (confirm('⚠️ ADVERTENCIA: Esto sobrescribirá todos los datos actuales con los del archivo de respaldo. ¿Deseas continuar?')) {
+                if (contenido.inventario) { inventario = contenido.inventario; localStorage.setItem('caja_pandora_inventario', JSON.stringify(inventario)); }
+                if (contenido.proveedores) { proveedores = contenido.proveedores; localStorage.setItem('caja_pandora_proveedores', JSON.stringify(proveedores)); }
+                if (contenido.ventas) { ventas = contenido.ventas; localStorage.setItem('caja_pandora_ventas', JSON.stringify(ventas)); }
+                if (contenido.deseos) { deseos = contenido.deseos; localStorage.setItem('caja_pandora_deseos', JSON.stringify(deseos)); }
+                if (contenido.usuarios) { usuarios = contenido.usuarios; localStorage.setItem('caja_pandora_usuarios', JSON.stringify(usuarios)); }
+                if (contenido.bitacora) { bitacora = contenido.bitacora; localStorage.setItem('caja_pandora_bitacora', JSON.stringify(bitacora)); }
+                
+                registrarBitacora('Restauró el sistema desde archivo JSON');
+                alert('¡Sistema restaurado con éxito!');
+                location.reload();
+            }
+        } catch (error) {
+            alert('Error al leer el archivo JSON. Asegúrate de que sea un respaldo válido.');
+        }
+    };
+    reader.readAsText(file);
 };
 
 // VENTAS Y COBRO
@@ -500,7 +562,6 @@ window.limpiarBitacora = function() {
     }
 };
 
-// FUNCIONES PDF (Placeholders seguros para evitar errores si no se usan)
 window.generarCatalogoPDF = function() { alert('Generando Catálogo PDF...'); };
 window.generarReporteCortePDF = function() { alert('Generando Reporte de Corte PDF...'); };
 window.imprimirEtiquetasSeleccionadas = function() { alert('Imprimiendo etiquetas Y50P...'); };

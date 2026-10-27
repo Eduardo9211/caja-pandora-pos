@@ -105,13 +105,33 @@
                     <label for="prod-stock">Cantidad / Piezas a ingresar</label>
                     <input type="number" id="prod-stock" value="1" min="1">
 
-                    <!-- CASILLA Y ENLACE PARA LA TIENDA WEB -->
+                    <!-- SECCIÓN DE ENVÍO Y PESO/MEDIDAS PARA TIENDA WEB -->
                     <div style="margin: 12px 0; background: #090d16; padding: 10px; border-radius: 6px; border: 1px dashed #d97706;">
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #fbbf24; font-weight: bold;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #fbbf24; font-weight: bold; margin-bottom: 8px;">
                             <input type="checkbox" id="prod-en-web" style="width: 20px; height: 20px;"> Publicar este artículo en la Tienda Web
                         </label>
-                        <label for="prod-imagen" style="display:block; margin-top:8px; font-size:0.85rem;">Enlace de la Imagen (URL):</label>
-                        <input type="text" id="prod-imagen" placeholder="https://ejemplo.com/foto.jpg" style="margin-top:4px;">
+                        
+                        <label for="prod-imagen" style="display:block; margin-top:4px; font-size:0.85rem;">Enlace de la Imagen (URL):</label>
+                        <input type="text" id="prod-imagen" placeholder="https://ejemplo.com/foto.jpg" style="margin-top:2px; margin-bottom:8px;">
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div>
+                                <label style="font-size:0.75rem;">Peso Real (kg):</label>
+                                <input type="number" id="prod-peso" value="1" min="0.1" step="0.1">
+                            </div>
+                            <div>
+                                <label style="font-size:0.75rem;">Largo (cm):</label>
+                                <input type="number" id="prod-largo" value="20" min="1">
+                            </div>
+                            <div>
+                                <label style="font-size:0.75rem;">Ancho (cm):</label>
+                                <input type="number" id="prod-ancho" value="20" min="1">
+                            </div>
+                            <div>
+                                <label style="font-size:0.75rem;">Alto (cm):</label>
+                                <input type="number" id="prod-alto" value="20" min="1">
+                            </div>
+                        </div>
                     </div>
 
                     <button class="btn-accent" onclick="guardarProducto()">Cargar al Inventario</button>
@@ -134,7 +154,6 @@
                     <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px;">Genera y descarga el catálogo oficial o abre tu Tienda Web.</p>
                     <div style="display: flex; flex-direction: column; gap: 8px;">
                         <button class="btn-primary" onclick="generarCatalogoPDF()">📄 Descargar Catálogo en PDF</button>
-                        <!-- ENLACE A LA TIENDA WEB PÚBLICA -->
                         <a href="tienda.html" target="_blank" style="background: #d97706; color: white; text-align: center; padding: 12px; border-radius: 8px; font-weight: bold; text-decoration: none;">🌐 Abrir Tienda Web Pública</a>
                     </div>
                 </div>
@@ -190,8 +209,19 @@
                 </div>
             </div>
 
-            <!-- TAB 7: ADMINISTRACIÓN Y BITÁCORA -->
+            <!-- TAB 7: ADMINISTRACIÓN, RESPALDO Y BITÁCORA -->
             <div id="tab-admin" class="tab-content">
+                <div class="card">
+                    <h2>💾 Respaldo y Restauración de Datos</h2>
+                    <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 12px;">Descarga un archivo JSON de respaldo con todo tu negocio o restaura uno anterior.</p>
+                    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                        <button class="btn-primary" onclick="descargarRespaldoJSON()" style="flex: 1; font-size: 0.85rem;">📥 Descargar Respaldo</button>
+                        <label style="flex: 1; background: #10b981; color: white; text-align: center; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.85rem; margin-top: 0;">
+                            📤 Subir Respaldo <input type="file" id="archivo-respaldo" accept=".json" onchange="restaurarRespaldoJSON(event)" style="display: none;">
+                        </label>
+                    </div>
+                </div>
+
                 <div class="card">
                     <h2>Registrar Nuevo Usuario</h2>
                     <label for="newUser-nombre">Nombre de Usuario / Empleado</label>
