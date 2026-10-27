@@ -1,12 +1,10 @@
-const CACHE_NAME = 'pandora-store-v15';
+const CACHE_NAME = 'pandora-store-v16';
 const urlsToCache = [
   '/',
   '/index.html',
   '/tienda.html',
   '/style.css',
   '/app.js',
-  '/printerService.js',
-  '/pdfReportService.js',
   '/jspdf.umd.min.js',
   '/manifest.json'
 ];
@@ -15,7 +13,15 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(urlsToCache);
+      // Usamos un ciclo seguro para que si algún archivo opcional no existe, 
+      // la instalación no se rompa por completo.
+      return Promise.all(
+        urlsToCache.map((url) => {
+          return cache.add(url).catch((error) => {
+            console.warn('Aviso: No se pudo cachear el recurso:', url, error);
+          });
+        })
+      );
     })
   );
 });
@@ -34,19 +40,18 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// ESTRATEGIA: CACHE FIRST
+// ESTRATEGIA: NETWORK FIRST CON FALLBACK A CACHÉ PARA EVITAR BLOQUEOS
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request).then((networkResponse) => {
+    fetch(event.request)
+      .then((networkResponse) => {
         return caches.open(CACHE_NAME).then((cache) => {
           cache.put(event.request, networkResponse.clone());
           return networkResponse;
         });
-      });
-    })
+      })
+      .catch(() => {
+        return caches.match(event.request);
+      })
   );
 });
